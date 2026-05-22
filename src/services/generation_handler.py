@@ -823,6 +823,18 @@ def _apply_veo_3_1_model_updates():
             ("1080p", "VIDEO_RESOLUTION_1080P", "veo_3_1_upsampler_1080p"),
         ):
             upsample = {"resolution": resolution, "model_key": upsampler_model_key}
+            MODEL_CONFIG[f"veo_3_1_t2v_fast_{suffix}_{resolution_name}"] = _make_t2v_config(
+                f"veo_3_1_t2v_fast_{suffix}", landscape, upsample=upsample
+            )
+            MODEL_CONFIG[f"veo_3_1_t2v_fast_portrait_{suffix}_{resolution_name}"] = _make_t2v_config(
+                f"veo_3_1_t2v_fast_{suffix}", portrait, upsample=upsample
+            )
+            MODEL_CONFIG[f"veo_3_1_i2v_s_fast_{suffix}_fl_{resolution_name}"] = _make_i2v_config(
+                f"veo_3_1_i2v_s_fast_{suffix}_fl", landscape, upsample=upsample
+            )
+            MODEL_CONFIG[f"veo_3_1_i2v_s_fast_portrait_{suffix}_fl_{resolution_name}"] = _make_i2v_config(
+                f"veo_3_1_i2v_s_fast_{suffix}_fl", portrait, upsample=upsample
+            )
             MODEL_CONFIG[f"veo_3_1_t2v_{suffix}_{resolution_name}"] = _make_t2v_config(
                 f"veo_3_1_t2v_quality_{suffix}", landscape, upsample=upsample
             )
@@ -877,6 +889,14 @@ def _apply_veo_3_1_model_updates():
         )
 
         for resolution_name in ("4k", "1080p"):
+            add_alias(
+                f"veo_3_1_t2v_fast_landscape_{suffix}_{resolution_name}",
+                f"veo_3_1_t2v_fast_{suffix}_{resolution_name}",
+            )
+            add_alias(
+                f"veo_3_1_i2v_s_fast_landscape_{suffix}_fl_{resolution_name}",
+                f"veo_3_1_i2v_s_fast_{suffix}_fl_{resolution_name}",
+            )
             add_alias(
                 f"veo_3_1_t2v_landscape_{suffix}_{resolution_name}",
                 f"veo_3_1_t2v_{suffix}_{resolution_name}",
@@ -2024,6 +2044,12 @@ class GenerationHandler:
                     _uuid_match = _re.search(r'/video/([0-9a-f-]{36})', video_url or '')
                     video_media_id = _uuid_match.group(1) if _uuid_match else video_info.get("mediaGenerationId", "")
                     aspect_ratio = video_info.get("aspectRatio", "VIDEO_ASPECT_RATIO_LANDSCAPE")
+
+                    if not video_url and video_media_id:
+                        video_url = await self.flow_client.get_media_url(token.st, video_media_id)
+                        _uuid_match = _re.search(r'/video/([0-9a-f-]{36})', video_url or '')
+                        if _uuid_match:
+                            video_media_id = _uuid_match.group(1)
 
                     if not video_url:
                         error_msg = "视频生成失败: 视频URL为空"

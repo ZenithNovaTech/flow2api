@@ -1680,6 +1680,14 @@ async def update_captcha_config(
         except Exception as e:
             print(f"[Admin] Personal 配置热更新失败: {e}")
 
+    if captcha_method == "playwright_personal":
+        try:
+            from ..services.playwright_personal_captcha import PlaywrightPersonalCaptchaService
+            service = await PlaywrightPersonalCaptchaService.get_instance(db)
+            await service.open_login_window()
+        except Exception as e:
+            print(f"[Admin] Playwright Personal 初始化失败: {e}")
+
     return {"success": True, "message": "验证码配置更新成功"}
 
 

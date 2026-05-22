@@ -107,6 +107,15 @@ async def lifespan(app: FastAPI):
         browser_service = await BrowserCaptchaService.get_instance(db)
         await browser_service.warmup_browser_slots()
         print("? Browser captcha service initialized (headed mode)")
+    elif captcha_config.captcha_method == "playwright_personal":
+        from .services.playwright_personal_captcha import PlaywrightPersonalCaptchaService
+        browser_service = await PlaywrightPersonalCaptchaService.get_instance(db)
+        try:
+            await browser_service.open_login_window()
+            print("✓ Playwright personal captcha service initialized (persistent profile)")
+            print("⚠ If Flow is not logged in, complete login in the opened browser window")
+        except Exception as e:
+            print(f"⚠ Playwright personal captcha startup failed: {type(e).__name__}: {e}")
 
     # Initialize concurrency manager
     await concurrency_manager.initialize(tokens)

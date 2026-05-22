@@ -898,6 +898,17 @@ class FlowClient:
                 self._set_request_fingerprint(fingerprint)
             except Exception as e:
                 debug_logger.log_error(f"[UPLOAD] Failed to pre-fetch fingerprint: {e}")
+        elif captcha_method == "playwright_personal":
+            try:
+                from .playwright_personal_captcha import PlaywrightPersonalCaptchaService
+                service = await PlaywrightPersonalCaptchaService.get_instance(self.db)
+                fingerprint = service.get_last_fingerprint()
+                if not fingerprint:
+                    await service.get_token(project_id or "", "uploadUserImage")
+                    fingerprint = service.get_last_fingerprint()
+                self._set_request_fingerprint(fingerprint)
+            except Exception as e:
+                debug_logger.log_error(f"[UPLOAD] Failed to pre-fetch playwright_personal fingerprint: {e}")
 
         for retry_attempt in range(max_retries):
             try:
@@ -2452,6 +2463,80 @@ class FlowClient:
             st_token=st
         )
 
+    async def get_media_url(self, st: str, media_name: str) -> Optional[str]:
+        """通过 labs media 重定向接口获取签名 CDN URL。"""
+        if not media_name:
+            return None
+
+        url = f"{self.labs_base_url}/trpc/media.getMediaUrlRedirect?name={quote(media_name, safe='')}"
+        fingerprint = self._request_fingerprint_ctx.get()
+        proxy_url = None
+        if self.proxy_manager:
+            if hasattr(self.proxy_manager, "get_media_proxy_url"):
+                proxy_url = await self.proxy_manager.get_media_proxy_url()
+            elif hasattr(self.proxy_manager, "get_request_proxy_url"):
+                proxy_url = await self.proxy_manager.get_request_proxy_url()
+            else:
+                proxy_url = await self.proxy_manager.get_proxy_url()
+        if isinstance(fingerprint, dict) and "proxy_url" in fingerprint:
+            proxy_url = fingerprint.get("proxy_url") or None
+
+        account_id = st[:16] if st else None
+        headers: Dict[str, str] = {
+            "Cookie": f"__Secure-next-auth.session-token={st}",
+            "User-Agent": (
+                fingerprint.get("user_agent")
+                if isinstance(fingerprint, dict) and fingerprint.get("user_agent")
+                else self._generate_user_agent(account_id)
+            ),
+        }
+        if isinstance(fingerprint, dict):
+            if fingerprint.get("accept_language"):
+                headers["Accept-Language"] = fingerprint["accept_language"]
+            if fingerprint.get("sec_ch_ua"):
+                headers["sec-ch-ua"] = fingerprint["sec_ch_ua"]
+            if fingerprint.get("sec_ch_ua_mobile"):
+                headers["sec-ch-ua-mobile"] = fingerprint["sec_ch_ua_mobile"]
+            if fingerprint.get("sec_ch_ua_platform"):
+                headers["sec-ch-ua-platform"] = fingerprint["sec_ch_ua_platform"]
+        for key, value in self._default_client_headers.items():
+            headers.setdefault(key, value)
+
+        start_time = time.time()
+        try:
+            async with AsyncSession(trust_env=False) as session:
+                response = await session.get(
+                    url,
+                    headers=headers,
+                    proxy=proxy_url,
+                    timeout=self.timeout,
+                    allow_redirects=False,
+                    impersonate="chrome124",
+                )
+
+            duration_ms = (time.time() - start_time) * 1000
+            if config.debug_enabled:
+                debug_logger.log_response(
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                    body=response.text,
+                    duration_ms=duration_ms,
+                )
+
+            location = response.headers.get("location") or response.headers.get("Location")
+            if location:
+                return location
+            if 200 <= response.status_code < 300 and response.url:
+                return str(response.url)
+
+            debug_logger.log_warning(
+                f"[MEDIA URL] 未获取到媒体跳转地址: media={media_name}, status={response.status_code}"
+            )
+            return None
+        except Exception as e:
+            debug_logger.log_error(f"[MEDIA URL] 获取媒体 URL 失败: media={media_name}, error={e}")
+            return None
+
     # ========== 辅助方法 ==========
 
     async def _handle_retryable_generation_error(
@@ -2574,6 +2659,17 @@ class FlowClient:
             try:
                 from .browser_captcha_personal import BrowserCaptchaService
                 service = await BrowserCaptchaService.get_instance(self.db)
+                await service.report_flow_error(
+                    project_id=project_id,
+                    error_reason=error_reason or "",
+                    error_message=error_message or "",
+                )
+            except Exception:
+                pass
+        elif config.captcha_method == "playwright_personal" and project_id:
+            try:
+                from .playwright_personal_captcha import PlaywrightPersonalCaptchaService
+                service = await PlaywrightPersonalCaptchaService.get_instance(self.db)
                 await service.report_flow_error(
                     project_id=project_id,
                     error_reason=error_reason or "",
@@ -2927,6 +3023,29 @@ class FlowClient:
                 return None, None
             except Exception as e:
                 debug_logger.log_error(f"[reCAPTCHA Personal] 错误: {str(e)}")
+                self._set_request_fingerprint(None)
+                return None, None
+        elif captcha_method == "playwright_personal":
+            try:
+                from .playwright_personal_captcha import PlaywrightPersonalCaptchaService
+                service = await PlaywrightPersonalCaptchaService.get_instance(self.db)
+                token = await service.get_token(project_id, action, token_id=token_id)
+                fingerprint = service.get_last_fingerprint() if token else None
+                self._set_request_fingerprint(fingerprint if token else None)
+                return token, "playwright_personal"
+            except RuntimeError as e:
+                error_msg = str(e)
+                debug_logger.log_error(f"[reCAPTCHA PlaywrightPersonal] {error_msg}")
+                print(f"[reCAPTCHA] ❌ Playwright Personal 打码失败: {error_msg}")
+                self._set_request_fingerprint(None)
+                return None, None
+            except ImportError as e:
+                debug_logger.log_error(f"[reCAPTCHA PlaywrightPersonal] 导入失败: {str(e)}")
+                print(f"[reCAPTCHA] ❌ playwright 未安装，请运行: pip install playwright && python -m playwright install chromium")
+                self._set_request_fingerprint(None)
+                return None, None
+            except Exception as e:
+                debug_logger.log_error(f"[reCAPTCHA PlaywrightPersonal] 错误: {str(e)}")
                 self._set_request_fingerprint(None)
                 return None, None
         # 有头浏览器打码 (playwright)

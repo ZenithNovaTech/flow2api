@@ -241,6 +241,23 @@ class GenerationConfigParam(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
+class VeoPredictInstance(BaseModel):
+    """Google Veo predictLongRunning instance."""
+
+    prompt: Optional[str] = None
+
+    model_config = ConfigDict(extra="allow")
+
+
+class VeoPredictRequest(BaseModel):
+    """Google Veo predictLongRunning request shape."""
+
+    instances: List[VeoPredictInstance]
+    parameters: Optional[GenerationConfigParam] = None
+
+    model_config = ConfigDict(extra="allow")
+
+
 class GeminiInlineData(BaseModel):
     """Gemini inline binary data."""
 

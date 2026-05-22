@@ -294,16 +294,17 @@ VIDEO_BASE_MODELS = {
 }
 
 
-def _extract_generation_params(request) -> Tuple[Optional[str], Optional[str]]:
-    """从请求中提取 aspectRatio 和 imageSize 参数。
+def _extract_generation_params(request) -> Tuple[Optional[str], Optional[str], Optional[int]]:
+    """从请求中提取 aspectRatio、imageSize/resolution 和 durationSeconds 参数。
 
     优先级：
-    1. request.generationConfig.imageConfig (顶层 Gemini 参数)
-    2. extra fields 中的 generationConfig (extra_body 透传)
-    3. OpenAI 风格字段（size/quality）兼容：可在 generationConfig/imageConfig 或顶层 extra 中出现
+    1. Google Veo 风格 request.parameters / request.config
+    2. request.generationConfig.imageConfig (顶层 Gemini 参数)
+    3. extra fields 中的 generationConfig/config/parameters (extra_body 透传)
+    4. OpenAI 风格字段（size/quality）兼容：可在 generationConfig/imageConfig 或顶层 extra 中出现
 
     Returns:
-        (aspect_ratio, image_size) 归一化后的值
+        (aspect_ratio, image_size, duration_seconds) 归一化后的值
     """
     def _normalize_str(value: Any) -> Optional[str]:
         if not isinstance(value, str):
@@ -374,6 +375,32 @@ def _extract_generation_params(request) -> Tuple[Optional[str], Optional[str]]:
             return mapped or None
         return token.lower()
 
+    def _normalize_duration_seconds(value: Any) -> Optional[int]:
+        if value is None or isinstance(value, bool):
+            return None
+        if isinstance(value, (int, float)):
+            seconds = int(value)
+        else:
+            raw = _normalize_str(value)
+            if not raw:
+                return None
+            token = raw.lower().strip()
+            if token.endswith("seconds"):
+                token = token[: -len("seconds")]
+            elif token.endswith("second"):
+                token = token[: -len("second")]
+            elif token.endswith("secs"):
+                token = token[: -len("secs")]
+            elif token.endswith("sec"):
+                token = token[: -len("sec")]
+            elif token.endswith("s"):
+                token = token[:-1]
+            try:
+                seconds = int(float(token.strip()))
+            except Exception:
+                return None
+        return seconds if seconds > 0 else None
+
     def _aspect_from_openai_size(value: Any) -> Optional[str]:
         raw = _normalize_str(value)
         if not raw:
@@ -434,12 +461,46 @@ def _extract_generation_params(request) -> Tuple[Optional[str], Optional[str]]:
 
         return aspect_ratio, image_size
 
+    def _apply_video_config(config_obj: Any, aspect_ratio: Optional[str], image_size: Optional[str], duration_seconds: Optional[int]) -> Tuple[Optional[str], Optional[str], Optional[int]]:
+        if config_obj is None:
+            return aspect_ratio, image_size, duration_seconds
+
+        video_config = _read_value(config_obj, "videoConfig", "video_config")
+        source = video_config if video_config is not None else config_obj
+
+        if not aspect_ratio:
+            aspect_ratio = _normalize_aspect_ratio(
+                _read_value(source, "aspectRatio", "aspect_ratio", "aspect")
+            )
+        if not image_size:
+            image_size = _normalize_image_size(
+                _read_value(source, "resolution", "imageSize", "image_size")
+            )
+        if not duration_seconds:
+            duration_seconds = _normalize_duration_seconds(
+                _read_value(source, "durationSeconds", "duration_seconds", "duration", "seconds")
+            )
+
+        return aspect_ratio, image_size, duration_seconds
+
     aspect_ratio: Optional[str] = None
     image_size: Optional[str] = None
+    duration_seconds: Optional[int] = None
 
-    # 1) 优先从 request.generationConfig 解析
+    # 1) 优先从 Google Veo REST/SDK 风格参数解析
+    for config_attr in ("parameters", "config"):
+        config_obj = getattr(request, config_attr, None)
+        if config_obj is not None:
+            aspect_ratio, image_size, duration_seconds = _apply_video_config(
+                config_obj, aspect_ratio, image_size, duration_seconds
+            )
+
+    # 2) 从 request.generationConfig 解析
     gen_config = getattr(request, "generationConfig", None)
     if gen_config is not None:
+        aspect_ratio, image_size, duration_seconds = _apply_video_config(
+            gen_config, aspect_ratio, image_size, duration_seconds
+        )
         image_config = _read_value(gen_config, "imageConfig", "image_config")
         if image_config is not None:
             aspect_ratio, image_size = _apply_image_config(
@@ -461,16 +522,29 @@ def _extract_generation_params(request) -> Tuple[Optional[str], Optional[str]]:
         if not image_size:
             image_size = _image_size_from_openai_quality(_read_value(gen_config, "quality"))
 
-    # 2) 顶层没有时，再尝试从 extra fields (Pydantic extra="allow") 中透传的 generationConfig
-    if (aspect_ratio is None or image_size is None) and hasattr(request, "__pydantic_extra__"):
+    # 3) 顶层没有时，再尝试从 extra fields (Pydantic extra="allow") 中透传的参数
+    if (aspect_ratio is None or image_size is None or duration_seconds is None) and hasattr(request, "__pydantic_extra__"):
         extra = request.__pydantic_extra__ or {}
-        gen_config_raw = extra.get("generationConfig")
-        if not isinstance(gen_config_raw, dict):
+        raw_configs = [
+            extra.get("parameters"),
+            extra.get("config"),
+            extra.get("generationConfig"),
+        ]
+        if not any(isinstance(item, dict) for item in raw_configs):
             extra_body = extra.get("extra_body") or extra.get("extraBody")
             if isinstance(extra_body, dict):
-                gen_config_raw = extra_body.get("generationConfig")
+                raw_configs.extend([
+                    extra_body.get("parameters"),
+                    extra_body.get("config"),
+                    extra_body.get("generationConfig"),
+                ])
 
-        if isinstance(gen_config_raw, dict):
+        for gen_config_raw in raw_configs:
+            if not isinstance(gen_config_raw, dict):
+                continue
+            aspect_ratio, image_size, duration_seconds = _apply_video_config(
+                gen_config_raw, aspect_ratio, image_size, duration_seconds
+            )
             image_config_raw = (
                 gen_config_raw.get("imageConfig")
                 or gen_config_raw.get("image_config")
@@ -495,8 +569,8 @@ def _extract_generation_params(request) -> Tuple[Optional[str], Optional[str]]:
             if image_size is None:
                 image_size = _image_size_from_openai_quality(gen_config_raw.get("quality"))
 
-    # 3) OpenAI 风格 size/quality（顶层 extra）兼容
-    if (aspect_ratio is None or image_size is None) and hasattr(request, "__pydantic_extra__"):
+    # 4) OpenAI 风格 size/quality（顶层 extra）兼容
+    if (aspect_ratio is None or image_size is None or duration_seconds is None) and hasattr(request, "__pydantic_extra__"):
         extra = request.__pydantic_extra__ or {}
         if aspect_ratio is None:
             aspect_ratio = _aspect_from_openai_size(extra.get("size"))
@@ -508,8 +582,12 @@ def _extract_generation_params(request) -> Tuple[Optional[str], Optional[str]]:
             aspect_ratio = _normalize_aspect_ratio(extra.get("aspect_ratio") or extra.get("aspectRatio"))
         if image_size is None:
             image_size = _normalize_image_size(extra.get("image_size") or extra.get("imageSize"))
+        if duration_seconds is None:
+            duration_seconds = _normalize_duration_seconds(
+                extra.get("durationSeconds") or extra.get("duration_seconds") or extra.get("duration")
+            )
 
-    return aspect_ratio, image_size
+    return aspect_ratio, image_size, duration_seconds
 
 
 def resolve_model_name(
@@ -532,8 +610,8 @@ def resolve_model_name(
     # ────── 图片模型解析 ──────
     if model in IMAGE_BASE_MODELS:
         base = IMAGE_BASE_MODELS[model]
-        aspect_ratio, image_size = (
-            _extract_generation_params(request) if request else (None, None)
+        aspect_ratio, image_size, _duration_seconds = (
+            _extract_generation_params(request) if request else (None, None, None)
         )
 
         # 默认 aspect ratio
@@ -578,13 +656,31 @@ def resolve_model_name(
 
     # ────── 视频模型解析 ──────
     if model in VIDEO_BASE_MODELS:
-        aspect_ratio, image_size = (
-            _extract_generation_params(request) if request else (None, None)
+        aspect_ratio, image_size, duration_seconds = (
+            _extract_generation_params(request) if request else (None, None, None)
         )
 
         # 视频默认横屏
         if not aspect_ratio or aspect_ratio not in ("landscape", "portrait"):
             aspect_ratio = "landscape"
+
+        duration_model = model
+        if duration_seconds in (4, 6) and f"{duration_model}_{duration_seconds}s" in VIDEO_BASE_MODELS:
+            duration_model = f"{duration_model}_{duration_seconds}s"
+
+        model = duration_model
+        if image_size in ("4k", "1080p"):
+            orientation_map = VIDEO_BASE_MODELS.get(duration_model, {})
+            oriented_duration_model = orientation_map.get(aspect_ratio, duration_model)
+            resolved_by_full_key = f"{oriented_duration_model}_{image_size}"
+            if model_config and resolved_by_full_key in model_config:
+                resolved = resolved_by_full_key
+                debug_logger.log_info(
+                    f"[MODEL_RESOLVER] 视频模型名转换: {model} → {resolved} "
+                    f"(aspectRatio={aspect_ratio}, durationSeconds={duration_seconds or 'default'}, "
+                    f"resolution={image_size})"
+                )
+                return resolved
 
         if image_size in ("4k", "1080p") and f"{model}_{image_size}" in VIDEO_BASE_MODELS:
             model = f"{model}_{image_size}"
@@ -595,7 +691,8 @@ def resolve_model_name(
         if resolved and model_config and resolved in model_config:
             debug_logger.log_info(
                 f"[MODEL_RESOLVER] 视频模型名转换: {model} → {resolved} "
-                f"(aspectRatio={aspect_ratio})"
+                f"(aspectRatio={aspect_ratio}, durationSeconds={duration_seconds or 'default'}, "
+                f"resolution={image_size or 'default'})"
             )
             return resolved
 

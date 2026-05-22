@@ -20,6 +20,7 @@ from ..core.models import (
     ChatMessage,
     GeminiContent,
     GeminiGenerateContentRequest,
+    VeoPredictRequest,
 )
 from ..services.generation_handler import MODEL_CONFIG, GenerationHandler
 from ..services.browser_captcha_extension import ExtensionCaptchaService
@@ -481,6 +482,38 @@ async def _normalize_gemini_request(
     )
 
 
+async def _normalize_veo_predict_request(
+    model: str,
+    request: VeoPredictRequest,
+) -> NormalizedGenerationRequest:
+    resolved_model = _resolve_request_model(model, request)
+    prompt_parts: List[str] = []
+    images: List[bytes] = []
+
+    for instance in request.instances:
+        prompt = (instance.prompt or "").strip()
+        if prompt:
+            prompt_parts.append(prompt)
+
+        extra = getattr(instance, "__pydantic_extra__", None) or {}
+        image_value = (
+            extra.get("image")
+            or extra.get("imageUrl")
+            or extra.get("image_url")
+            or extra.get("startImage")
+            or extra.get("start_image")
+        )
+        if isinstance(image_value, str) and image_value.strip():
+            images.append(await _load_image_bytes_from_uri(image_value.strip()))
+
+    prompt = "\n".join(prompt_parts).strip()
+    return NormalizedGenerationRequest(
+        model=resolved_model,
+        prompt=prompt,
+        images=images,
+    )
+
+
 async def _collect_non_stream_result(
     model: str,
     prompt: str,
@@ -668,6 +701,32 @@ async def _build_gemini_success_payload(
             }
         ],
         "modelVersion": response_model,
+    }
+
+
+async def _build_veo_operation_payload(
+    payload: Dict[str, Any],
+    response_model: str,
+) -> Dict[str, Any]:
+    payload = _enrich_payload_with_direct_url(payload)
+    uri = _extract_url_from_openai_payload(payload)
+    operation_name = payload.get("id") or f"operations/{response_model}"
+
+    response: Dict[str, Any] = {"model": response_model}
+    if uri:
+        response["generatedVideos"] = [
+            {
+                "video": {
+                    "uri": uri,
+                    "mimeType": _guess_mime_type(uri, "video/mp4"),
+                }
+            }
+        ]
+
+    return {
+        "name": operation_name,
+        "done": True,
+        "response": response,
     }
 
 
@@ -921,6 +980,49 @@ async def generate_content(
 
         return JSONResponse(
             content=await _build_gemini_success_payload(payload, normalized.model)
+        )
+
+    except HTTPException as exc:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=_build_gemini_error_payload(exc.status_code, str(exc.detail)),
+        )
+    except Exception as exc:
+        return JSONResponse(
+            status_code=500,
+            content=_build_gemini_error_payload(500, str(exc)),
+        )
+
+
+@router.post("/v1beta/models/{model}:predictLongRunning")
+@router.post("/models/{model}:predictLongRunning")
+async def predict_long_running(
+    model: str,
+    request: VeoPredictRequest,
+    raw_request: Request,
+    api_key: str = Depends(verify_api_key_flexible),
+):
+    """Google Veo-compatible predictLongRunning endpoint."""
+    try:
+        normalized = await _normalize_veo_predict_request(model, request)
+        if not normalized.prompt:
+            raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+
+        request_base_url = _get_request_base_url(raw_request)
+        payload = _parse_handler_result(
+            await _collect_non_stream_result(
+                normalized.model,
+                normalized.prompt,
+                normalized.images,
+                base_url_override=request_base_url,
+                video_media_id=normalized.video_media_id,
+            )
+        )
+        if "error" in payload:
+            return _build_gemini_error_response_from_handler(payload)
+
+        return JSONResponse(
+            content=await _build_veo_operation_payload(payload, normalized.model)
         )
 
     except HTTPException as exc:
