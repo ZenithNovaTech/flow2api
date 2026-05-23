@@ -7,6 +7,7 @@ import uuid
 import random
 import base64
 import ssl
+import traceback
 from typing import Dict, Any, Optional, List, Union, Callable, Awaitable
 from urllib.parse import quote
 import urllib.error
@@ -77,8 +78,9 @@ class FlowClient:
         seed = int(hashlib.md5(account_id.encode()).hexdigest()[:8], 16)
         rng = random.Random(seed)
         
-        # Chrome 版本池 - 匹配真实 Mac mini Chrome 147 环境
-        chrome_versions = ["147.0.7727.56", "146.0.7688.92", "145.0.7649.100"]
+        # Keep fallback UA aligned with curl_cffi impersonate="chrome124".
+        # When a captcha browser fingerprint exists, its UA overrides this value.
+        chrome_versions = ["124.0.6367.60", "124.0.6367.78", "124.0.6367.91"]
         ch_version = rng.choice(chrome_versions)
         user_agent = f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{ch_version} Safari/537.36"
         
@@ -294,12 +296,18 @@ class FlowClient:
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
             error_msg = str(e)
+            cause = getattr(e, "__cause__", None)
+            context = getattr(e, "__context__", None)
 
             # 如果不是我们自己抛出的异常，记录日志
             if "HTTP Error" not in error_msg and not any(x in error_msg for x in ["PUBLIC_ERROR", "INVALID_ARGUMENT"]):
                 debug_logger.log_error(f"[API FAILED] URL: {url}")
                 debug_logger.log_error(f"[API FAILED] Request Body: {json_data}")
-                debug_logger.log_error(f"[API FAILED] Exception: {error_msg}")
+                debug_logger.log_error(
+                    f"[API FAILED] Exception: type={type(e).__name__} repr={repr(e)} "
+                    f"duration_ms={duration_ms:.0f} cause={repr(cause)} context={repr(context)}"
+                )
+                debug_logger.log_error(f"[API FAILED] Traceback: {traceback.format_exc()}")
 
             if allow_urllib_fallback and self._should_fallback_to_urllib(error_msg):
                 debug_logger.log_warning(
@@ -317,13 +325,15 @@ class FlowClient:
                     )
                 except Exception as fallback_error:
                     debug_logger.log_error(
-                        f"[HTTP FALLBACK] urllib 回退也失败: {fallback_error}"
+                        f"[HTTP FALLBACK] urllib 回退也失败: "
+                        f"type={type(fallback_error).__name__} repr={repr(fallback_error)}"
                     )
                     raise Exception(
-                        f"Flow API request failed: curl={error_msg}; urllib={fallback_error}"
+                        f"Flow API request failed: curl={type(e).__name__}: {error_msg}; "
+                        f"urllib={type(fallback_error).__name__}: {fallback_error}"
                     )
 
-            raise Exception(f"Flow API request failed: {error_msg}")
+            raise Exception(f"Flow API request failed: {type(e).__name__}: {error_msg}")
 
     def _should_fallback_to_urllib(self, error_message: str) -> bool:
         """判断是否应从 curl_cffi 回退到 urllib。"""
@@ -1113,6 +1123,7 @@ class FlowClient:
                 attempt_trace["duration_ms"] = int((time.time() - attempt_started_at) * 1000)
                 perf_trace["generation_attempts"].append(attempt_trace)
                 perf_trace["final_success_attempt"] = retry_attempt + 1
+                await self._notify_browser_captcha_request_finished(browser_id)
                 return result, session_id, perf_trace
             except Exception as e:
                 last_error = e
@@ -1131,8 +1142,6 @@ class FlowClient:
                 if should_retry:
                     continue
                 raise
-            finally:
-                await self._notify_browser_captcha_request_finished(browser_id)
         
         # 所有重试都失败
         perf_trace["final_success_attempt"] = None
@@ -1215,6 +1224,7 @@ class FlowClient:
                 )
 
                 # 返回 base64 编码的图片
+                await self._notify_browser_captcha_request_finished(browser_id)
                 return result.get("encodedImage", "")
             except Exception as e:
                 last_error = e
@@ -1229,8 +1239,6 @@ class FlowClient:
                 if should_retry:
                     continue
                 raise
-            finally:
-                await self._notify_browser_captcha_request_finished(browser_id)
 
         raise last_error
 
@@ -1568,7 +1576,9 @@ class FlowClient:
                     at=at,
                     timeout=self._get_video_submit_timeout()
                 )
-                return self._normalize_video_generation_response(result, fallback_project_id=project_id)
+                normalized = self._normalize_video_generation_response(result, fallback_project_id=project_id)
+                await self._notify_browser_captcha_request_finished(browser_id)
+                return normalized
             except Exception as e:
                 last_error = e
                 should_retry = await self._handle_retryable_generation_error(
@@ -1582,8 +1592,6 @@ class FlowClient:
                 if should_retry:
                     continue
                 raise
-            finally:
-                await self._notify_browser_captcha_request_finished(browser_id)
         
         # 所有重试都失败
         raise last_error
@@ -1695,7 +1703,9 @@ class FlowClient:
                     at=at,
                     timeout=self._get_video_submit_timeout()
                 )
-                return self._normalize_video_generation_response(result, fallback_project_id=project_id)
+                normalized = self._normalize_video_generation_response(result, fallback_project_id=project_id)
+                await self._notify_browser_captcha_request_finished(browser_id)
+                return normalized
             except Exception as e:
                 last_error = e
                 should_retry = await self._handle_retryable_generation_error(
@@ -1709,8 +1719,6 @@ class FlowClient:
                 if should_retry:
                     continue
                 raise
-            finally:
-                await self._notify_browser_captcha_request_finished(browser_id)
         
         # 所有重试都失败
         raise last_error
@@ -1825,7 +1833,9 @@ class FlowClient:
                     at=at,
                     timeout=self._get_video_submit_timeout()
                 )
-                return self._normalize_video_generation_response(result, fallback_project_id=project_id)
+                normalized = self._normalize_video_generation_response(result, fallback_project_id=project_id)
+                await self._notify_browser_captcha_request_finished(browser_id)
+                return normalized
             except Exception as e:
                 last_error = e
                 should_retry = await self._handle_retryable_generation_error(
@@ -1839,8 +1849,6 @@ class FlowClient:
                 if should_retry:
                     continue
                 raise
-            finally:
-                await self._notify_browser_captcha_request_finished(browser_id)
         
         # 所有重试都失败
         raise last_error
@@ -1951,7 +1959,9 @@ class FlowClient:
                     at=at,
                     timeout=self._get_video_submit_timeout()
                 )
-                return self._normalize_video_generation_response(result, fallback_project_id=project_id)
+                normalized = self._normalize_video_generation_response(result, fallback_project_id=project_id)
+                await self._notify_browser_captcha_request_finished(browser_id)
+                return normalized
             except Exception as e:
                 last_error = e
                 should_retry = await self._handle_retryable_generation_error(
@@ -1965,8 +1975,6 @@ class FlowClient:
                 if should_retry:
                     continue
                 raise
-            finally:
-                await self._notify_browser_captcha_request_finished(browser_id)
         
         # 所有重试都失败
         raise last_error
@@ -2083,7 +2091,9 @@ class FlowClient:
                     at=at,
                     timeout=self._get_video_submit_timeout()
                 )
-                return self._normalize_video_generation_response(result, fallback_project_id=project_id)
+                normalized = self._normalize_video_generation_response(result, fallback_project_id=project_id)
+                await self._notify_browser_captcha_request_finished(browser_id)
+                return normalized
             except Exception as e:
                 last_error = e
                 should_retry = await self._handle_retryable_generation_error(
@@ -2097,8 +2107,6 @@ class FlowClient:
                 if should_retry:
                     continue
                 raise
-            finally:
-                await self._notify_browser_captcha_request_finished(browser_id)
 
         # 所有重试都失败
         raise last_error
@@ -2347,7 +2355,9 @@ class FlowClient:
                     at=at,
                     timeout=self._get_video_submit_timeout()
                 )
-                return self._normalize_video_generation_response(result, fallback_project_id=project_id)
+                normalized = self._normalize_video_generation_response(result, fallback_project_id=project_id)
+                await self._notify_browser_captcha_request_finished(browser_id)
+                return normalized
             except Exception as e:
                 last_error = e
                 should_retry = await self._handle_retryable_generation_error(
@@ -2361,8 +2371,6 @@ class FlowClient:
                 if should_retry:
                     continue
                 raise
-            finally:
-                await self._notify_browser_captcha_request_finished(browser_id)
         
         raise last_error
 
@@ -2427,6 +2435,90 @@ class FlowClient:
         if last_error is not None:
             raise last_error
         raise RuntimeError("视频状态查询失败")
+
+    async def get_media_url(self, st: str, media_name: str) -> Optional[str]:
+        """Resolve a generated media id to its signed CDN URL.
+
+        Newer video status responses may only include the media UUID. Flow's
+        web app resolves that UUID through this Labs redirect endpoint.
+        """
+        if not media_name:
+            return None
+
+        url = f"{self.labs_base_url}/trpc/media.getMediaUrlRedirect?name={quote(media_name, safe='')}"
+        headers = {
+            "Accept": "*/*",
+            "Cookie": f"__Secure-next-auth.session-token={st}",
+        }
+
+        fingerprint = self._request_fingerprint_ctx.get()
+        account_id = st[:16] if st else None
+        fingerprint_user_agent = fingerprint.get("user_agent") if isinstance(fingerprint, dict) else None
+        headers["User-Agent"] = fingerprint_user_agent or self._generate_user_agent(account_id)
+
+        if isinstance(fingerprint, dict):
+            if fingerprint.get("accept_language"):
+                headers.setdefault("Accept-Language", fingerprint["accept_language"])
+            if fingerprint.get("sec_ch_ua"):
+                headers["sec-ch-ua"] = fingerprint["sec_ch_ua"]
+            if fingerprint.get("sec_ch_ua_mobile"):
+                headers["sec-ch-ua-mobile"] = fingerprint["sec_ch_ua_mobile"]
+            if fingerprint.get("sec_ch_ua_platform"):
+                headers["sec-ch-ua-platform"] = fingerprint["sec_ch_ua_platform"]
+
+        for key, value in self._default_client_headers.items():
+            headers.setdefault(key, value)
+
+        proxy_url = None
+        if self.proxy_manager:
+            if hasattr(self.proxy_manager, "get_media_proxy_url"):
+                proxy_url = await self.proxy_manager.get_media_proxy_url()
+            elif hasattr(self.proxy_manager, "get_request_proxy_url"):
+                proxy_url = await self.proxy_manager.get_request_proxy_url()
+            else:
+                proxy_url = await self.proxy_manager.get_proxy_url()
+
+        if isinstance(fingerprint, dict) and "proxy_url" in fingerprint:
+            proxy_url = fingerprint.get("proxy_url") or None
+
+        start_time = time.time()
+        try:
+            async with AsyncSession(trust_env=False) as session:
+                response = await session.get(
+                    url,
+                    headers=headers,
+                    proxy=proxy_url,
+                    timeout=self._get_control_plane_timeout(),
+                    impersonate="chrome124",
+                    allow_redirects=False,
+                )
+
+            duration_ms = (time.time() - start_time) * 1000
+            if config.debug_enabled:
+                debug_logger.log_response(
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                    body=response.text,
+                    duration_ms=duration_ms,
+                )
+
+            location = response.headers.get("Location") or response.headers.get("location")
+            if location:
+                return location
+
+            if response.status_code >= 400:
+                raise Exception(f"HTTP Error {response.status_code}: {response.text[:200]}")
+
+            try:
+                body = response.json()
+            except Exception:
+                body = {}
+            if isinstance(body, dict):
+                return self._find_nested_string(body, ("url", "mediaUrl", "fifeUrl", "downloadUri"))
+            return None
+        except Exception as e:
+            debug_logger.log_error(f"[MEDIA URL] 获取媒体URL失败: media={media_name}, error={e}")
+            raise Exception(f"Flow media URL request failed: {e}") from e
 
     # ========== 媒体删除 (使用ST) ==========
 
@@ -2977,7 +3069,7 @@ class FlowClient:
             except Exception as e:
                 debug_logger.log_error(f"[reCAPTCHA RemoteBrowser] 错误: {str(e)}")
                 self._set_request_fingerprint(None)
-                return None, None
+                raise
         # API打码服务
         elif captcha_method in ["yescaptcha", "capmonster", "ezcaptcha", "capsolver"]:
             # 为 API 打码也设置指纹（包含代理），确保 token 获取和后续请求环境一致

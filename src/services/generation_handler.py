@@ -742,6 +742,33 @@ def _apply_veo_3_1_model_updates():
     MODEL_CONFIG["veo_3_1_i2v_s_portrait"].update({"model_key": "veo_3_1_i2v_s_portrait_fl"})
     MODEL_CONFIG["veo_3_1_extend"].update({"model_key": "veo_3_1_extend_landscape"})
     MODEL_CONFIG["veo_3_1_extend_portrait"].update({"model_key": "veo_3_1_extend_portrait"})
+    # Abra / Omni Flash mirrors the Veo 3.1 T2V Lite alias shape.
+    MODEL_CONFIG["abra_t2v_landscape"] = _make_t2v_config(
+        "abra_t2v",
+        landscape,
+        use_v2_model_config=True,
+        allow_tier_upgrade=False,
+    )
+    MODEL_CONFIG["abra_t2v_portrait"] = _make_t2v_config(
+        "abra_t2v",
+        portrait,
+        use_v2_model_config=True,
+        allow_tier_upgrade=False,
+    )
+    for seconds in (4, 6, 8, 10):
+        suffix = f"{seconds}s"
+        MODEL_CONFIG[f"abra_t2v_{suffix}_landscape"] = _make_t2v_config(
+            f"abra_t2v_{suffix}",
+            landscape,
+            use_v2_model_config=True,
+            allow_tier_upgrade=False,
+        )
+        MODEL_CONFIG[f"abra_t2v_{suffix}_portrait"] = _make_t2v_config(
+            f"abra_t2v_{suffix}",
+            portrait,
+            use_v2_model_config=True,
+            allow_tier_upgrade=False,
+        )
 
     for seconds in (4, 6):
         suffix = f"{seconds}s"
@@ -2024,6 +2051,17 @@ class GenerationHandler:
                     _uuid_match = _re.search(r'/video/([0-9a-f-]{36})', video_url or '')
                     video_media_id = _uuid_match.group(1) if _uuid_match else video_info.get("mediaGenerationId", "")
                     aspect_ratio = video_info.get("aspectRatio", "VIDEO_ASPECT_RATIO_LANDSCAPE")
+
+                    if not video_url and video_media_id:
+                        try:
+                            video_url = await self.flow_client.get_media_url(token.st, video_media_id)
+                            _uuid_match = _re.search(r'/video/([0-9a-f-]{36})', video_url or '')
+                            if _uuid_match:
+                                video_media_id = _uuid_match.group(1)
+                        except Exception as e:
+                            debug_logger.log_warning(
+                                f"通过 mediaId 获取视频URL失败: mediaId={video_media_id}, error={e}"
+                            )
 
                     if not video_url:
                         error_msg = "视频生成失败: 视频URL为空"

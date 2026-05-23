@@ -1,6 +1,6 @@
 import types
 import unittest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 from src.core.model_resolver import resolve_model_name
 from src.services.flow_client import FlowClient
@@ -8,6 +8,29 @@ from src.services.generation_handler import MODEL_CONFIG, GenerationHandler
 
 
 class VeoLiteModelResolverTests(unittest.TestCase):
+    def test_resolve_abra_t2v_aliases_to_portrait_variants(self):
+        request = types.SimpleNamespace(
+            generationConfig=types.SimpleNamespace(aspectRatio="portrait")
+        )
+
+        resolved = resolve_model_name(
+            "abra_t2v",
+            request=request,
+            model_config=MODEL_CONFIG,
+        )
+
+        self.assertEqual(resolved, "abra_t2v_portrait")
+
+        for seconds in (4, 6, 8, 10):
+            with self.subTest(seconds=seconds):
+                resolved = resolve_model_name(
+                    f"abra_t2v_{seconds}s",
+                    request=request,
+                    model_config=MODEL_CONFIG,
+                )
+
+                self.assertEqual(resolved, f"abra_t2v_{seconds}s_portrait")
+
     def test_resolve_t2v_lite_alias_to_portrait_variant(self):
         request = types.SimpleNamespace(
             generationConfig=types.SimpleNamespace(aspectRatio="portrait")
@@ -275,6 +298,83 @@ class VeoLiteFlowClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             operation["operation"]["metadata"]["video"]["fifeUrl"],
             "https://flow-content.google/video/11111111-1111-1111-1111-111111111111?token=abc",
+        )
+
+    async def test_check_video_status_preserves_media_id_when_response_has_no_url(self):
+        async def fake_make_request(method, url, json_data, use_at, at_token, **kwargs):
+            return {
+                "media": [
+                    {
+                        "name": "a6624a62-1111-2222-3333-444444444444",
+                        "projectId": "project-1",
+                        "mediaMetadata": {
+                            "mediaStatus": {
+                                "mediaGenerationStatus": "MEDIA_GENERATION_STATUS_SUCCESSFUL"
+                            }
+                        },
+                        "video": {
+                            "generatedVideo": {
+                                "aspectRatio": "VIDEO_ASPECT_RATIO_LANDSCAPE"
+                            },
+                            "operation": {
+                                "name": "a6624a62-1111-2222-3333-444444444444"
+                            },
+                        },
+                    }
+                ]
+            }
+
+        self.client._make_request = AsyncMock(side_effect=fake_make_request)
+
+        result = await self.client.check_video_status(
+            at="at-token",
+            operations=[
+                {
+                    "operation": {"name": "a6624a62-1111-2222-3333-444444444444"},
+                    "projectId": "project-1",
+                }
+            ],
+        )
+
+        video_metadata = result["operations"][0]["operation"]["metadata"]["video"]
+        self.assertNotIn("fifeUrl", video_metadata)
+        self.assertEqual(
+            video_metadata["mediaGenerationId"],
+            "a6624a62-1111-2222-3333-444444444444",
+        )
+
+    async def test_get_media_url_returns_redirect_location(self):
+        class FakeResponse:
+            status_code = 307
+            headers = {
+                "Location": "https://flow-content.google/video/a6624a62-1111-2222-3333-444444444444?Signature=abc"
+            }
+            text = ""
+
+            def json(self):
+                return {}
+
+        class FakeSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+            async def get(self, *args, **kwargs):
+                self.url = args[0]
+                self.kwargs = kwargs
+                return FakeResponse()
+
+        with patch("src.services.flow_client.AsyncSession", return_value=FakeSession()):
+            media_url = await self.client.get_media_url(
+                "session-token",
+                "a6624a62-1111-2222-3333-444444444444",
+            )
+
+        self.assertEqual(
+            media_url,
+            "https://flow-content.google/video/a6624a62-1111-2222-3333-444444444444?Signature=abc",
         )
 
     async def test_generate_video_start_end_uses_v2_payload_for_interpolation_lite(self):

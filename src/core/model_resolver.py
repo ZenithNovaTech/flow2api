@@ -123,6 +123,27 @@ ASPECT_RATIO_FLOAT_MAP = {
 # 视频模型简化名映射
 # ──────────────────────────────────────────────
 VIDEO_BASE_MODELS = {
+    # Abra / Omni Flash T2V models
+    "abra_t2v": {
+        "landscape": "abra_t2v_landscape",
+        "portrait": "abra_t2v_portrait",
+    },
+    "abra_t2v_4s": {
+        "landscape": "abra_t2v_4s_landscape",
+        "portrait": "abra_t2v_4s_portrait",
+    },
+    "abra_t2v_6s": {
+        "landscape": "abra_t2v_6s_landscape",
+        "portrait": "abra_t2v_6s_portrait",
+    },
+    "abra_t2v_8s": {
+        "landscape": "abra_t2v_8s_landscape",
+        "portrait": "abra_t2v_8s_portrait",
+    },
+    "abra_t2v_10s": {
+        "landscape": "abra_t2v_10s_landscape",
+        "portrait": "abra_t2v_10s_portrait",
+    },
     # T2V models
     "veo_3_1_t2v_fast": {
         "landscape": "veo_3_1_t2v_fast_landscape",
