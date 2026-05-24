@@ -2934,6 +2934,34 @@ class FlowClient:
                 warmed += 1
         return warmed
 
+    async def refresh_session_token_with_remote_browser(
+        self,
+        project_id: str,
+        token_id: Optional[int] = None,
+        timeout_override: Optional[int] = None,
+    ) -> Optional[str]:
+        """Ask the remote browser service to refresh the Flow session token."""
+        normalized_project = str(project_id or "").strip()
+        if not normalized_project:
+            return None
+
+        payload = await self._call_remote_browser_service(
+            method="POST",
+            path="/api/v1/refresh-session-token",
+            json_data={
+                "project_id": normalized_project,
+                "token_id": token_id,
+            },
+            timeout_override=timeout_override or max(45, int(config.remote_browser_timeout or 60)),
+        )
+
+        session_token = (
+            payload.get("session_token")
+            or payload.get("st")
+            or payload.get("token")
+        )
+        return str(session_token).strip() if session_token else None
+
     def _resolve_remote_browser_solve_timeout(self, action: str) -> int:
         base_timeout = max(5, int(config.remote_browser_timeout or 60))
         action_name = str(action or "").strip().upper()

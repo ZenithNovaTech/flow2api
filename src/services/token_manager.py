@@ -560,9 +560,11 @@ class TokenManager:
         try:
             from ..core.config import config
 
-            # 仅在 personal 模式下支持 ST 自动刷新
-            if config.captcha_method != "personal":
-                debug_logger.log_info(f"[ST_REFRESH] 非 personal 模式，跳过 ST 自动刷新")
+            # ST refresh needs a browser session that can read Flow cookies.
+            if config.captcha_method not in {"personal", "remote_browser"}:
+                debug_logger.log_info(
+                    f"[ST_REFRESH] 当前打码模式不支持 ST 自动刷新: {config.captcha_method}"
+                )
                 return None
 
             if not token.current_project_id:
@@ -571,15 +573,21 @@ class TokenManager:
 
             debug_logger.log_info(f"[ST_REFRESH] Token {token_id}: 尝试通过浏览器刷新 ST...")
 
-            from .browser_captcha_personal import BrowserCaptchaService
-            service = await BrowserCaptchaService.get_instance(self.db)
-
             refresh_timeout_seconds = 45.0
             try:
-                new_st = await asyncio.wait_for(
-                    service.refresh_session_token(token.current_project_id),
-                    timeout=refresh_timeout_seconds,
-                )
+                if config.captcha_method == "remote_browser":
+                    new_st = await self.flow_client.refresh_session_token_with_remote_browser(
+                        token.current_project_id,
+                        token_id=token_id,
+                        timeout_override=int(refresh_timeout_seconds),
+                    )
+                else:
+                    from .browser_captcha_personal import BrowserCaptchaService
+                    service = await BrowserCaptchaService.get_instance(self.db)
+                    new_st = await asyncio.wait_for(
+                        service.refresh_session_token(token.current_project_id),
+                        timeout=refresh_timeout_seconds,
+                    )
             except asyncio.TimeoutError:
                 debug_logger.log_error(
                     f"[ST_REFRESH] Token {token_id}: 刷新 ST 超时 ({refresh_timeout_seconds:.0f}s)"

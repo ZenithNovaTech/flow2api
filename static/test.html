@@ -3,80 +3,111 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Flow2API 模型测试</title>
+<title>Flow2API 稳定性测试台</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1117; color: #e1e1e6; min-height: 100vh; }
-.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-h1 { text-align: center; margin-bottom: 8px; font-size: 24px; color: #7c8aff; }
-.subtitle { text-align: center; color: #666; margin-bottom: 24px; font-size: 14px; }
+:root {
+  --bg: #101214;
+  --panel: #171b1f;
+  --panel-2: #1e2429;
+  --field: #0c0f11;
+  --line: #2d353b;
+  --line-soft: #242b30;
+  --text: #edf2f4;
+  --muted: #8b979f;
+  --muted-2: #66737c;
+  --accent: #2dd4bf;
+  --accent-strong: #14b8a6;
+  --blue: #3b82f6;
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --red: #ef4444;
+}
+body {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+.container { max-width: 1280px; margin: 0 auto; padding: 18px; }
+h1 { margin-bottom: 4px; font-size: 22px; color: var(--text); font-weight: 750; letter-spacing: 0; }
+.subtitle { color: var(--muted); margin-bottom: 18px; font-size: 13px; }
 
 .config-bar {
-  display: flex; gap: 12px; margin-bottom: 20px; align-items: center;
-  background: #1a1b26; padding: 12px 16px; border-radius: 10px; border: 1px solid #2a2b3a;
+  display: grid; grid-template-columns: auto minmax(180px, 1fr) auto minmax(180px, 1fr);
+  gap: 10px; margin-bottom: 8px; align-items: center;
+  background: var(--panel); padding: 12px 14px; border-radius: 8px; border: 1px solid var(--line);
 }
-.config-bar label { font-size: 13px; color: #888; white-space: nowrap; }
-.config-bar input { flex: 1; background: #0f1117; border: 1px solid #2a2b3a; color: #e1e1e6; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
-.config-note { margin-bottom: 20px; font-size: 12px; color: #7f8498; }
+.config-bar label { font-size: 12px; color: var(--muted); white-space: nowrap; font-weight: 650; }
+.config-bar input {
+  min-width: 0; background: var(--field); border: 1px solid var(--line); color: var(--text);
+  padding: 9px 11px; border-radius: 6px; font-size: 13px;
+}
+.config-note {
+  margin-bottom: 18px; font-size: 12px; color: var(--muted-2);
+  border-left: 3px solid var(--accent); padding-left: 10px;
+}
 
 .main-layout { display: flex; gap: 20px; }
-.sidebar { width: 280px; flex-shrink: 0; }
+.sidebar { width: 300px; flex-shrink: 0; }
 .content { flex: 1; min-width: 0; }
 
-.model-section { margin-bottom: 16px; }
+.model-section { margin-bottom: 10px; }
 .section-title {
-  font-size: 13px; font-weight: 600; color: #7c8aff; padding: 8px 12px;
-  background: #1a1b26; border-radius: 8px 8px 0 0; border: 1px solid #2a2b3a; border-bottom: none;
+  font-size: 12px; font-weight: 750; color: var(--accent); padding: 9px 11px;
+  background: var(--panel-2); border-radius: 8px 8px 0 0; border: 1px solid var(--line); border-bottom: none;
   cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center;
 }
-.section-title:hover { background: #1e1f2e; }
+.section-title:hover { background: #222a30; }
 .section-title .arrow { transition: transform 0.2s; }
 .section-title.collapsed .arrow { transform: rotate(-90deg); }
 .model-list {
-  background: #1a1b26; border: 1px solid #2a2b3a; border-radius: 0 0 8px 8px;
-  max-height: 300px; overflow-y: auto;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 0 0 8px 8px;
+  max-height: 270px; overflow-y: auto;
 }
 .model-list.hidden { display: none; }
 .model-item {
-  padding: 8px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #1e1f2e;
-  display: flex; justify-content: space-between; align-items: center;
+  padding: 9px 11px; font-size: 12px; cursor: pointer; border-bottom: 1px solid var(--line-soft);
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
 }
 .model-item:last-child { border-bottom: none; }
-.model-item:hover { background: #1e1f2e; }
-.model-item.active { background: #2a2b5a; color: #7c8aff; }
+.model-item:hover { background: #20262b; }
+.model-item.active { background: #12332f; color: #5eead4; box-shadow: inset 3px 0 0 var(--accent); }
 .model-tag {
-  font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 500;
+  font-size: 10px; padding: 3px 6px; border-radius: 999px; font-weight: 750; flex-shrink: 0;
 }
-.tag-image { background: #1a3a2a; color: #4ade80; }
-.tag-video { background: #3a2a1a; color: #fb923c; }
+.tag-image { background: #123524; color: #5ee084; }
+.tag-video { background: #3d2b12; color: #fbbf24; }
 
 .gen-panel {
-  background: #1a1b26; border: 1px solid #2a2b3a; border-radius: 10px; padding: 20px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px;
 }
-.gen-panel h3 { font-size: 16px; margin-bottom: 4px; }
-.gen-panel .model-info { font-size: 12px; color: #666; margin-bottom: 16px; }
+.gen-panel h3 { font-size: 16px; margin-bottom: 4px; color: var(--text); }
+.gen-panel .model-info { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
 
 .form-group { margin-bottom: 14px; }
-.form-group label { display: block; font-size: 13px; color: #888; margin-bottom: 6px; }
+.form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 650; }
 .form-group textarea {
-  width: 100%; background: #0f1117; border: 1px solid #2a2b3a; color: #e1e1e6;
-  padding: 10px 12px; border-radius: 8px; font-size: 14px; resize: vertical; min-height: 80px;
+  width: 100%; background: var(--field); border: 1px solid var(--line); color: var(--text);
+  padding: 11px 12px; border-radius: 6px; font-size: 14px; resize: vertical; min-height: 92px;
   font-family: inherit;
 }
-.form-group textarea:focus { outline: none; border-color: #7c8aff; }
+.form-group textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12); }
 .form-group input {
-  width: 100%; background: #0f1117; border: 1px solid #2a2b3a; color: #e1e1e6;
-  padding: 10px 12px; border-radius: 8px; font-size: 14px; font-family: inherit;
+  width: 100%; background: var(--field); border: 1px solid var(--line); color: var(--text);
+  padding: 10px 12px; border-radius: 6px; font-size: 14px; font-family: inherit;
 }
-.form-group input:focus { outline: none; border-color: #7c8aff; }
+.form-group input:focus, .config-bar input:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12);
+}
 
 .image-upload-area {
-  border: 2px dashed #2a2b3a; border-radius: 8px; padding: 20px; text-align: center;
+  border: 1px dashed #3d4a51; border-radius: 6px; padding: 18px; text-align: center;
   cursor: pointer; transition: border-color 0.2s; position: relative;
 }
-.image-upload-area:hover { border-color: #7c8aff; }
+.image-upload-area:hover { border-color: var(--accent); }
 .image-upload-area.has-images { padding: 10px; }
-.image-upload-hint { color: #555; font-size: 13px; }
+.image-upload-hint { color: var(--muted-2); font-size: 13px; }
 .image-preview-list { display: flex; gap: 8px; flex-wrap: wrap; }
 .image-preview-item {
   position: relative; width: 80px; height: 80px; border-radius: 6px; overflow: hidden;
@@ -89,47 +120,76 @@ h1 { text-align: center; margin-bottom: 8px; font-size: 24px; color: #7c8aff; }
 }
 
 .btn-generate {
-  width: 100%; padding: 12px; background: #7c8aff; color: #fff; border: none;
-  border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;
+  width: 100%; padding: 12px; background: var(--accent-strong); color: #06201c; border: none;
+  border-radius: 6px; font-size: 15px; font-weight: 800; cursor: pointer;
   transition: background 0.2s;
 }
-.btn-generate:hover { background: #6b79ee; }
-.btn-generate:disabled { background: #3a3b5a; cursor: not-allowed; }
+.btn-generate:hover { background: #2dd4bf; }
+.btn-generate:disabled { background: #334047; color: #91a0a8; cursor: not-allowed; }
+.batch-grid {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end;
+}
+.batch-grid input {
+  width: 100%; background: var(--field); border: 1px solid var(--line); color: var(--text);
+  padding: 10px 12px; border-radius: 6px; font-size: 14px; font-family: inherit;
+}
+.batch-actions { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 10px; }
+.btn-secondary, .btn-danger {
+  padding: 10px 12px; color: #fff; border: none; border-radius: 6px; font-size: 14px;
+  font-weight: 750; cursor: pointer; transition: background 0.2s;
+}
+.btn-secondary { background: var(--blue); }
+.btn-secondary:hover { background: #2563eb; }
+.btn-secondary:disabled, .btn-danger:disabled { background: #334047; color: #91a0a8; cursor: not-allowed; }
+.btn-danger { background: var(--red); min-width: 84px; }
+.btn-danger:hover { background: #dc2626; }
+.batch-summary {
+  margin-top: 10px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
+}
+.batch-stat { background: var(--field); border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
+.batch-stat .label { color: var(--muted-2); font-size: 11px; margin-bottom: 4px; font-weight: 650; }
+.batch-stat .value { color: var(--text); font-size: 18px; font-weight: 800; }
+.batch-stat:first-child { border-color: rgba(45, 212, 191, 0.45); }
+.batch-stat:first-child .value { color: var(--accent); }
+.batch-stat.success .value { color: var(--green); }
+.batch-stat.fail .value { color: var(--red); }
+.batch-stat.warn .value { color: var(--amber); }
 
 .output-panel {
-  background: #1a1b26; border: 1px solid #2a2b3a; border-radius: 10px; padding: 20px; margin-top: 16px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px; margin-top: 16px;
 }
-.output-panel h3 { font-size: 15px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.output-panel h3 { font-size: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--text); }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.status-idle { background: #555; }
-.status-running { background: #facc15; animation: pulse 1s infinite; }
-.status-done { background: #4ade80; }
-.status-error { background: #f87171; }
+.status-idle { background: var(--muted-2); }
+.status-running { background: var(--amber); animation: pulse 1s infinite; }
+.status-done { background: var(--green); }
+.status-error { background: var(--red); }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 
 .output-log {
-  background: #0f1117; border-radius: 8px; padding: 12px; font-size: 13px;
-  line-height: 1.6; max-height: 200px; overflow-y: auto; white-space: pre-wrap;
-  word-break: break-all; color: #aaa;
+  background: #090b0c; border: 1px solid var(--line-soft); border-radius: 6px; padding: 12px; font-size: 12px;
+  line-height: 1.55; max-height: 320px; overflow-y: auto; white-space: pre-wrap;
+  word-break: break-all; color: #b7c2c9; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 .output-result { margin-top: 12px; }
-.output-result img { max-width: 100%; border-radius: 8px; margin-top: 8px; }
-.output-result video { max-width: 100%; border-radius: 8px; margin-top: 8px; }
+.output-result img { max-width: 100%; border-radius: 6px; margin-top: 8px; border: 1px solid var(--line); }
+.output-result video { max-width: 100%; border-radius: 6px; margin-top: 8px; border: 1px solid var(--line); }
 
 .model-list::-webkit-scrollbar, .output-log::-webkit-scrollbar { width: 4px; }
-.model-list::-webkit-scrollbar-thumb, .output-log::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+.model-list::-webkit-scrollbar-thumb, .output-log::-webkit-scrollbar-thumb { background: #3a464d; border-radius: 2px; }
 
 @media (max-width: 768px) {
   .main-layout { flex-direction: column; }
   .sidebar { width: 100%; }
-  .config-bar { flex-wrap: wrap; }
+  .config-bar { grid-template-columns: 1fr; }
+  .batch-grid, .batch-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>🧪 Flow2API 模型测试</h1>
-  <p class="subtitle">选择模型，输入提示词，测试生成效果</p>
+  <h1>Flow2API 稳定性测试台</h1>
+  <p class="subtitle">单次生成、批量成功率、耗时和失败响应排查</p>
 
   <div class="config-bar">
     <label>API Key:</label>
@@ -152,7 +212,7 @@ h1 { text-align: center; margin-bottom: 8px; font-size: 24px; color: #7c8aff; }
         </div>
 
         <div class="form-group" id="imageUploadGroup" style="display:none;">
-          <label>上传图片 <span id="imageLimit" style="color:#666;font-size:12px;"></span></label>
+          <label>上传图片 <span id="imageLimit" style="color:var(--muted-2);font-size:12px;"></span></label>
           <div class="image-upload-area" id="imageUploadArea">
             <div class="image-upload-hint" id="imageHint">点击或拖拽上传图片</div>
             <div class="image-preview-list" id="imagePreviewList"></div>
@@ -166,6 +226,34 @@ h1 { text-align: center; margin-bottom: 8px; font-size: 24px; color: #7c8aff; }
         </div>
 
         <button class="btn-generate" id="btnGenerate" disabled>选择模型后开始生成</button>
+
+        <div class="form-group" style="margin-top:14px;">
+          <label>批量测试</label>
+          <div class="batch-grid">
+            <div>
+              <label>次数</label>
+              <input type="number" id="batchCount" min="1" max="100" value="10">
+            </div>
+            <div>
+              <label>间隔秒</label>
+              <input type="number" id="batchDelay" min="0" max="300" value="2">
+            </div>
+            <div>
+              <label>显示结果</label>
+              <input type="number" id="batchRenderEvery" min="0" max="100" value="1">
+            </div>
+          </div>
+          <div class="batch-actions">
+            <button class="btn-secondary" id="btnBatch" disabled>批量测试成功率</button>
+            <button class="btn-danger" id="btnStopBatch" disabled>停止</button>
+          </div>
+          <div class="batch-summary">
+            <div class="batch-stat" id="batchRateCard"><div class="label">成功率</div><div class="value" id="batchRate">-</div></div>
+            <div class="batch-stat success"><div class="label">成功</div><div class="value" id="batchSuccess">0</div></div>
+            <div class="batch-stat fail"><div class="label">失败</div><div class="value" id="batchFail">0</div></div>
+            <div class="batch-stat warn"><div class="label">平均耗时</div><div class="value" id="batchAvg">-</div></div>
+          </div>
+        </div>
       </div>
 
       <div class="output-panel">
@@ -178,7 +266,7 @@ h1 { text-align: center; margin-bottom: 8px; font-size: 24px; color: #7c8aff; }
 </div>
 
 <script>
-const STATE = { selectedModel: null, modelConfig: null, images: [], generating: false };
+const STATE = { selectedModel: null, modelConfig: null, images: [], generating: false, batchStop: false };
 </script>
 <script>
 // Model categories for sidebar
@@ -289,6 +377,33 @@ const HIDDEN_SIDEBAR_MODELS = new Set([
   "abra_t2v_portrait",
 ]);
 
+function maskSecret(value) {
+  if (!value) return "";
+  if (value.length <= 8) return `${value.slice(0, 2)}***${value.slice(-2)}`;
+  return `${value.slice(0, 6)}...${value.slice(-4)}`;
+}
+
+function redactDataUrls(value) {
+  if (Array.isArray(value)) return value.map(redactDataUrls);
+  if (value && typeof value === "object") {
+    const copy = {};
+    Object.entries(value).forEach(([key, item]) => {
+      copy[key] = redactDataUrls(item);
+    });
+    return copy;
+  }
+  if (typeof value === "string" && value.startsWith("data:")) {
+    const commaIndex = value.indexOf(",");
+    const meta = commaIndex >= 0 ? value.slice(0, commaIndex) : "data:*";
+    return `${meta},<base64 ${value.length} chars>`;
+  }
+  return value;
+}
+
+function formatJson(value) {
+  return JSON.stringify(value, null, 2);
+}
+
 function applyFallbackModels(reason) {
   console.warn("使用内置候选模型列表:", reason);
   ALL_MODELS = { ...FALLBACK_MODELS };
@@ -357,7 +472,7 @@ function renderSidebar() {
 
   const modelIds = Object.keys(ALL_MODELS).filter(modelId => !HIDDEN_SIDEBAR_MODELS.has(modelId)).sort();
   if (modelIds.length === 0) {
-    sidebar.innerHTML = '<div class="model-section"><div class="model-list" style="border-radius:8px;"><div class="model-item" style="cursor:default;color:#888;">未获取到可用模型，请检查 API Key 或稍后重试</div></div></div>';
+    sidebar.innerHTML = '<div class="model-section"><div class="model-list" style="border-radius:8px;"><div class="model-item" style="cursor:default;color:var(--muted);">未获取到可用模型，请检查 API Key 或稍后重试</div></div></div>';
     return;
   }
 
@@ -436,6 +551,7 @@ function selectModel(modelId) {
   const btn = document.getElementById("btnGenerate");
   btn.disabled = false;
   btn.textContent = meta.type === "image" ? "🎨 生成图片" : "🎬 生成视频";
+  document.getElementById("btnBatch").disabled = false;
 }
 
 // Image upload handling
@@ -447,11 +563,11 @@ uploadArea.onclick = (e) => {
   fileInput.click();
 };
 
-uploadArea.ondragover = (e) => { e.preventDefault(); uploadArea.style.borderColor = "#7c8aff"; };
-uploadArea.ondragleave = () => { uploadArea.style.borderColor = "#2a2b3a"; };
+uploadArea.ondragover = (e) => { e.preventDefault(); uploadArea.style.borderColor = "var(--accent)"; };
+uploadArea.ondragleave = () => { uploadArea.style.borderColor = "#3d4a51"; };
 uploadArea.ondrop = (e) => {
   e.preventDefault();
-  uploadArea.style.borderColor = "#2a2b3a";
+  uploadArea.style.borderColor = "#3d4a51";
   handleFiles(e.dataTransfer.files);
 };
 
@@ -491,44 +607,22 @@ function removeImage(idx) {
   renderImagePreviews();
 }
 
-// Generation
-document.getElementById("btnGenerate").onclick = generate;
-
-async function generate() {
-  if (!STATE.selectedModel || STATE.generating) return;
-
+function collectGenerationRequest() {
   const baseUrl = (document.getElementById("baseUrl").value || "").trim();
   const apiKey = (document.getElementById("apiKey").value || "").trim();
   const prompt = document.getElementById("promptInput").value.trim();
   const extendMediaId = document.getElementById("extendMediaId").value.trim();
-  if (!prompt) { alert("请输入提示词"); return; }
-  if (!apiKey) { alert("请输入 API Key"); return; }
-  if (!baseUrl) { alert("请输入服务地址"); return; }
+  if (!prompt) throw new Error("请输入提示词");
+  if (!apiKey) throw new Error("请输入 API Key");
+  if (!baseUrl) throw new Error("请输入服务地址");
   const meta = STATE.modelConfig;
   if (meta && STATE.images.length < meta.minImages) {
-    alert(`该模型至少需要上传 ${meta.minImages} 张图片`);
-    return;
+    throw new Error(`该模型至少需要上传 ${meta.minImages} 张图片`);
   }
   if (meta && meta.requiresVideoId && !extendMediaId) {
-    alert("请输入续写源视频 Media ID");
-    return;
+    throw new Error("请输入续写源视频 Media ID");
   }
 
-  STATE.generating = true;
-  const btn = document.getElementById("btnGenerate");
-  btn.disabled = true;
-  btn.textContent = "⏳ 生成中...";
-
-  const dot = document.getElementById("statusDot");
-  dot.className = "status-dot status-running";
-  document.getElementById("statusText").textContent = "生成中...";
-  document.getElementById("outputLog").textContent = "";
-  document.getElementById("outputResult").innerHTML = "";
-
-  const log = document.getElementById("outputLog");
-  const appendLog = (text) => { log.textContent += text; log.scrollTop = log.scrollHeight; };
-
-  // Build messages
   const content = [];
   content.push({ type: "text", text: prompt });
   STATE.images.forEach(dataUrl => {
@@ -540,71 +634,130 @@ async function generate() {
 
   const messages = [{ role: "user", content: content.length === 1 ? prompt : content }];
 
+  const url = `${baseUrl}/v1/chat/completions`;
+  const headers = { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" };
+  const loggedHeaders = { ...headers, Authorization: `Bearer ${maskSecret(apiKey)}` };
   const body = { model: STATE.selectedModel, messages, stream: true };
+  return { url, headers, loggedHeaders, body, prompt, model: STATE.selectedModel };
+}
 
+async function runGenerationRequest(request, appendLog) {
   const startTime = Date.now();
-  appendLog(`[${new Date().toLocaleTimeString()}] 模型: ${STATE.selectedModel}\n`);
-  appendLog(`[${new Date().toLocaleTimeString()}] 提示词: ${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}\n`);
+  let fullContent = "";
+
+  appendLog(`[${new Date().toLocaleTimeString()}] 模型: ${request.model}\n`);
+  appendLog(`[${new Date().toLocaleTimeString()}] 提示词: ${request.prompt.substring(0, 100)}${request.prompt.length > 100 ? '...' : ''}\n`);
   appendLog(`[${new Date().toLocaleTimeString()}] 开始请求...\n`);
+  appendLog(`\n--- 请求参数 ---\n`);
+  appendLog(`URL: ${request.url}\n`);
+  appendLog(`Method: POST\n`);
+  appendLog(`Headers:\n${formatJson(request.loggedHeaders)}\n`);
+  appendLog(`Body:\n${formatJson(redactDataUrls(request.body))}\n`);
+  appendLog(`--- 响应 ---\n`);
 
-  try {
-    const resp = await fetch(`${baseUrl}/v1/chat/completions`, {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+  const resp = await fetch(request.url, {
+    method: "POST",
+    headers: request.headers,
+    body: JSON.stringify(request.body),
+  });
 
-    if (!resp.ok) {
-      const errText = await resp.text();
-      throw new Error(`HTTP ${resp.status}: ${errText}`);
-    }
+  if (!resp.ok) {
+    const errText = await resp.text();
+    const responseHeaders = {};
+    resp.headers.forEach((value, key) => { responseHeaders[key] = value; });
+    appendLog(`Status: HTTP ${resp.status} ${resp.statusText}\n`);
+    appendLog(`Response Headers:\n${formatJson(responseHeaders)}\n`);
+    appendLog(`Response Body:\n${errText}\n`);
+    throw new Error(`HTTP ${resp.status}: ${errText}`);
+  }
 
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let fullContent = "";
-    let buffer = "";
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
 
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const data = line.slice(6).trim();
-        if (data === "[DONE]") continue;
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const data = line.slice(6).trim();
+      if (data === "[DONE]") continue;
 
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.error) {
-            appendLog(`\n❌ 错误: ${JSON.stringify(parsed.error)}\n`);
-            continue;
-          }
-          const choices = parsed.choices || [];
-          if (choices.length > 0) {
-            const delta = choices[0].delta || {};
-            const content = delta.reasoning_content || delta.content || "";
-            if (content) {
-              fullContent += content;
-              appendLog(content);
-            }
-          }
-        } catch (e) {
-          // skip unparseable chunks
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed.error) {
+          appendLog(`\n❌ 错误: ${JSON.stringify(parsed.error)}\n`);
+          throw new Error(JSON.stringify(parsed.error));
         }
+        const choices = parsed.choices || [];
+        if (choices.length > 0) {
+          const delta = choices[0].delta || {};
+          const content = delta.reasoning_content || delta.content || "";
+          if (content) {
+            fullContent += content;
+            appendLog(content);
+          }
+        }
+      } catch (e) {
+        if (e.message && e.message.startsWith("{")) throw e;
       }
     }
+  }
 
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    appendLog(`\n\n[${new Date().toLocaleTimeString()}] 完成，耗时 ${elapsed}s\n`);
+  const elapsed = (Date.now() - startTime) / 1000;
+  if (!fullContent.trim()) {
+    throw new Error("响应为空，未收到生成内容");
+  }
+  appendLog(`\n\n[${new Date().toLocaleTimeString()}] 完成，耗时 ${elapsed.toFixed(1)}s\n`);
+  return { content: fullContent, elapsed };
+}
 
-    // Render result
-    renderResult(fullContent);
+function setRunningState(running, label) {
+  const btn = document.getElementById("btnGenerate");
+  const batchBtn = document.getElementById("btnBatch");
+  btn.disabled = running;
+  batchBtn.disabled = running || !STATE.selectedModel;
+  btn.textContent = running ? label : (STATE.modelConfig && STATE.modelConfig.type === "image" ? "🎨 生成图片" : "🎬 生成视频");
+}
+
+// Generation
+document.getElementById("btnGenerate").onclick = generate;
+document.getElementById("btnBatch").onclick = runBatchTest;
+document.getElementById("btnStopBatch").onclick = () => { STATE.batchStop = true; };
+
+async function generate() {
+  if (!STATE.selectedModel || STATE.generating) return;
+
+  let request;
+  try {
+    request = collectGenerationRequest();
+  } catch (e) {
+    alert(e.message);
+    return;
+  }
+
+  STATE.generating = true;
+  setRunningState(true, "⏳ 生成中...");
+
+  const dot = document.getElementById("statusDot");
+  dot.className = "status-dot status-running";
+  document.getElementById("statusText").textContent = "生成中...";
+  document.getElementById("outputLog").textContent = "";
+  document.getElementById("outputResult").innerHTML = "";
+
+  const log = document.getElementById("outputLog");
+  const appendLog = (text) => { log.textContent += text; log.scrollTop = log.scrollHeight; };
+
+  try {
+    const result = await runGenerationRequest(request, appendLog);
+    renderResult(result.content);
     dot.className = "status-dot status-done";
-    document.getElementById("statusText").textContent = `完成 (${elapsed}s)`;
+    document.getElementById("statusText").textContent = `完成 (${result.elapsed.toFixed(1)}s)`;
 
   } catch (e) {
     appendLog(`\n❌ 请求失败: ${e.message}\n`);
@@ -612,9 +765,106 @@ async function generate() {
     document.getElementById("statusText").textContent = "失败";
   } finally {
     STATE.generating = false;
-    btn.disabled = false;
-    const meta = STATE.modelConfig;
-    btn.textContent = meta && meta.type === "image" ? "🎨 生成图片" : "🎬 生成视频";
+    setRunningState(false);
+  }
+}
+
+function updateBatchSummary(success, fail, totalElapsed) {
+  const done = success + fail;
+  const rate = done ? `${((success / done) * 100).toFixed(1)}%` : "-";
+  const avg = done ? `${(totalElapsed / done).toFixed(1)}s` : "-";
+  const rateCard = document.getElementById("batchRateCard");
+  rateCard.classList.remove("success", "fail", "warn");
+  if (done > 0) {
+    const rateValue = success / done;
+    rateCard.classList.add(rateValue >= 0.95 ? "success" : (rateValue >= 0.75 ? "warn" : "fail"));
+  }
+  document.getElementById("batchRate").textContent = rate;
+  document.getElementById("batchSuccess").textContent = String(success);
+  document.getElementById("batchFail").textContent = String(fail);
+  document.getElementById("batchAvg").textContent = avg;
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function runBatchTest() {
+  if (!STATE.selectedModel || STATE.generating) return;
+
+  let request;
+  try {
+    request = collectGenerationRequest();
+  } catch (e) {
+    alert(e.message);
+    return;
+  }
+
+  const count = Math.max(1, Math.min(100, parseInt(document.getElementById("batchCount").value, 10) || 1));
+  const delaySeconds = Math.max(0, Math.min(300, parseInt(document.getElementById("batchDelay").value, 10) || 0));
+  const renderEvery = Math.max(0, parseInt(document.getElementById("batchRenderEvery").value, 10) || 0);
+  let success = 0;
+  let fail = 0;
+  let totalElapsed = 0;
+
+  STATE.generating = true;
+  STATE.batchStop = false;
+  setRunningState(true, "⏳ 批量测试中...");
+  document.getElementById("btnStopBatch").disabled = false;
+  document.getElementById("outputLog").textContent = "";
+  document.getElementById("outputResult").innerHTML = "";
+  updateBatchSummary(0, 0, 0);
+
+  const dot = document.getElementById("statusDot");
+  const log = document.getElementById("outputLog");
+  const appendLog = (text) => { log.textContent += text; log.scrollTop = log.scrollHeight; };
+  dot.className = "status-dot status-running";
+
+  try {
+    appendLog(`[${new Date().toLocaleTimeString()}] 批量测试开始: ${count} 次，间隔 ${delaySeconds}s\n`);
+    for (let i = 1; i <= count; i++) {
+      if (STATE.batchStop) {
+        appendLog(`\n[${new Date().toLocaleTimeString()}] 已手动停止，完成 ${i - 1}/${count} 次\n`);
+        break;
+      }
+
+      document.getElementById("statusText").textContent = `批量测试 ${i}/${count}`;
+      appendLog(`\n========== 第 ${i}/${count} 次 ==========\n`);
+
+      const attemptStart = Date.now();
+      try {
+        const result = await runGenerationRequest(request, appendLog);
+        success += 1;
+        totalElapsed += result.elapsed;
+        appendLog(`✅ 第 ${i} 次成功，耗时 ${result.elapsed.toFixed(1)}s\n`);
+        if (renderEvery > 0 && (i % renderEvery === 0 || i === count)) {
+          renderResult(result.content);
+        }
+      } catch (e) {
+        const failElapsed = (Date.now() - attemptStart) / 1000;
+        fail += 1;
+        totalElapsed += failElapsed;
+        appendLog(`❌ 第 ${i} 次失败，耗时 ${failElapsed.toFixed(1)}s: ${e.message}\n`);
+      }
+
+      updateBatchSummary(success, fail, totalElapsed);
+      if (i < count && !STATE.batchStop && delaySeconds > 0) {
+        appendLog(`[${new Date().toLocaleTimeString()}] 等待 ${delaySeconds}s 后继续...\n`);
+        await sleep(delaySeconds * 1000);
+      }
+    }
+
+    const done = success + fail;
+    const rate = done ? ((success / done) * 100).toFixed(1) : "0.0";
+    appendLog(`\n========== 批量测试完成 ==========\n`);
+    appendLog(`总次数: ${done}/${count}\n成功: ${success}\n失败: ${fail}\n成功率: ${rate}%\n平均耗时: ${done ? (totalElapsed / done).toFixed(1) : "-"}s\n`);
+    dot.className = fail === 0 && success > 0 ? "status-dot status-done" : "status-dot status-error";
+    document.getElementById("statusText").textContent = `批量完成，成功率 ${rate}%`;
+  } finally {
+    STATE.generating = false;
+    STATE.batchStop = false;
+    document.getElementById("btnStopBatch").disabled = true;
+    setRunningState(false);
   }
 }
 
@@ -647,7 +897,7 @@ function renderResult(content) {
   // If no media found, show raw text
   if (resultDiv.children.length === 0 && content.trim()) {
     const pre = document.createElement("pre");
-    pre.style.cssText = "color:#aaa;font-size:13px;white-space:pre-wrap;word-break:break-all;";
+    pre.style.cssText = "color:var(--muted);font-size:13px;white-space:pre-wrap;word-break:break-all;";
     pre.textContent = content;
     resultDiv.appendChild(pre);
   }
