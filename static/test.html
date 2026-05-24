@@ -7,21 +7,21 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
-  --bg: #101214;
-  --panel: #171b1f;
-  --panel-2: #1e2429;
-  --field: #0c0f11;
-  --line: #2d353b;
-  --line-soft: #242b30;
-  --text: #edf2f4;
-  --muted: #8b979f;
-  --muted-2: #66737c;
-  --accent: #2dd4bf;
-  --accent-strong: #14b8a6;
-  --blue: #3b82f6;
-  --green: #22c55e;
-  --amber: #f59e0b;
-  --red: #ef4444;
+  --bg: #fafafa;
+  --panel: #ffffff;
+  --panel-2: #fafafa;
+  --field: #ffffff;
+  --line: #eaeaea;
+  --line-soft: #f1f1f1;
+  --text: #000000;
+  --muted: #666666;
+  --muted-2: #8a8a8a;
+  --accent: #000000;
+  --accent-strong: #000000;
+  --blue: #000000;
+  --green: #0070f3;
+  --amber: #f5a623;
+  --red: #ee0000;
 }
 body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -29,23 +29,23 @@ body {
   color: var(--text);
   min-height: 100vh;
 }
-.container { max-width: 1280px; margin: 0 auto; padding: 18px; }
-h1 { margin-bottom: 4px; font-size: 22px; color: var(--text); font-weight: 750; letter-spacing: 0; }
-.subtitle { color: var(--muted); margin-bottom: 18px; font-size: 13px; }
+.container { max-width: 1280px; margin: 0 auto; padding: 24px; }
+h1 { margin-bottom: 6px; font-size: 24px; color: var(--text); font-weight: 650; letter-spacing: 0; }
+.subtitle { color: var(--muted); margin-bottom: 24px; font-size: 14px; }
 
 .config-bar {
   display: grid; grid-template-columns: auto minmax(180px, 1fr) auto minmax(180px, 1fr);
-  gap: 10px; margin-bottom: 8px; align-items: center;
-  background: var(--panel); padding: 12px 14px; border-radius: 8px; border: 1px solid var(--line);
+  gap: 12px; margin-bottom: 10px; align-items: center;
+  background: var(--panel); padding: 16px; border-radius: 6px; border: 1px solid var(--line);
 }
-.config-bar label { font-size: 12px; color: var(--muted); white-space: nowrap; font-weight: 650; }
+.config-bar label { font-size: 13px; color: var(--muted); white-space: nowrap; font-weight: 500; }
 .config-bar input {
   min-width: 0; background: var(--field); border: 1px solid var(--line); color: var(--text);
-  padding: 9px 11px; border-radius: 6px; font-size: 13px;
+  padding: 9px 11px; border-radius: 6px; font-size: 14px;
 }
 .config-note {
-  margin-bottom: 18px; font-size: 12px; color: var(--muted-2);
-  border-left: 3px solid var(--accent); padding-left: 10px;
+  margin-bottom: 20px; font-size: 13px; color: var(--muted);
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px;
 }
 
 .main-layout { display: flex; gap: 20px; }
@@ -54,58 +54,60 @@ h1 { margin-bottom: 4px; font-size: 22px; color: var(--text); font-weight: 750; 
 
 .model-section { margin-bottom: 10px; }
 .section-title {
-  font-size: 12px; font-weight: 750; color: var(--accent); padding: 9px 11px;
-  background: var(--panel-2); border-radius: 8px 8px 0 0; border: 1px solid var(--line); border-bottom: none;
+  font-size: 13px; font-weight: 600; color: var(--text); padding: 10px 12px;
+  background: var(--panel-2); border-radius: 6px 6px 0 0; border: 1px solid var(--line); border-bottom: none;
   cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center;
 }
-.section-title:hover { background: #222a30; }
+.section-title:hover { background: #f5f5f5; }
 .section-title .arrow { transition: transform 0.2s; }
 .section-title.collapsed .arrow { transform: rotate(-90deg); }
 .model-list {
-  background: var(--panel); border: 1px solid var(--line); border-radius: 0 0 8px 8px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 0 0 6px 6px;
   max-height: 270px; overflow-y: auto;
 }
 .model-list.hidden { display: none; }
 .model-item {
-  padding: 9px 11px; font-size: 12px; cursor: pointer; border-bottom: 1px solid var(--line-soft);
+  padding: 10px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid var(--line-soft);
   display: flex; justify-content: space-between; align-items: center; gap: 10px;
 }
 .model-item:last-child { border-bottom: none; }
-.model-item:hover { background: #20262b; }
-.model-item.active { background: #12332f; color: #5eead4; box-shadow: inset 3px 0 0 var(--accent); }
+.model-item:hover { background: #fafafa; }
+.model-item.active { background: #000000; color: #ffffff; }
 .model-tag {
-  font-size: 10px; padding: 3px 6px; border-radius: 999px; font-weight: 750; flex-shrink: 0;
+  font-size: 11px; padding: 2px 6px; border-radius: 999px; font-weight: 500; flex-shrink: 0;
+  border: 1px solid var(--line);
 }
-.tag-image { background: #123524; color: #5ee084; }
-.tag-video { background: #3d2b12; color: #fbbf24; }
+.tag-image { background: #ffffff; color: #000000; }
+.tag-video { background: #fafafa; color: #666666; }
+.model-item.active .model-tag { border-color: rgba(255,255,255,0.35); background: #111111; color: #ffffff; }
 
 .gen-panel {
-  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 20px;
 }
-.gen-panel h3 { font-size: 16px; margin-bottom: 4px; color: var(--text); }
-.gen-panel .model-info { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+.gen-panel h3 { font-size: 18px; margin-bottom: 4px; color: var(--text); font-weight: 600; }
+.gen-panel .model-info { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
 
-.form-group { margin-bottom: 14px; }
-.form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 650; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; color: var(--text); margin-bottom: 6px; font-weight: 500; }
 .form-group textarea {
   width: 100%; background: var(--field); border: 1px solid var(--line); color: var(--text);
-  padding: 11px 12px; border-radius: 6px; font-size: 14px; resize: vertical; min-height: 92px;
+  padding: 10px 12px; border-radius: 6px; font-size: 14px; resize: vertical; min-height: 100px;
   font-family: inherit;
 }
-.form-group textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12); }
+.form-group textarea:focus { outline: none; border-color: #000000; box-shadow: 0 0 0 1px #000000; }
 .form-group input {
   width: 100%; background: var(--field); border: 1px solid var(--line); color: var(--text);
   padding: 10px 12px; border-radius: 6px; font-size: 14px; font-family: inherit;
 }
 .form-group input:focus, .config-bar input:focus {
-  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12);
+  outline: none; border-color: #000000; box-shadow: 0 0 0 1px #000000;
 }
 
 .image-upload-area {
-  border: 1px dashed #3d4a51; border-radius: 6px; padding: 18px; text-align: center;
+  border: 1px dashed #d4d4d4; border-radius: 6px; padding: 18px; text-align: center;
   cursor: pointer; transition: border-color 0.2s; position: relative;
 }
-.image-upload-area:hover { border-color: var(--accent); }
+.image-upload-area:hover { border-color: #000000; }
 .image-upload-area.has-images { padding: 10px; }
 .image-upload-hint { color: var(--muted-2); font-size: 13px; }
 .image-preview-list { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -120,12 +122,12 @@ h1 { margin-bottom: 4px; font-size: 22px; color: var(--text); font-weight: 750; 
 }
 
 .btn-generate {
-  width: 100%; padding: 12px; background: var(--accent-strong); color: #06201c; border: none;
-  border-radius: 6px; font-size: 15px; font-weight: 800; cursor: pointer;
-  transition: background 0.2s;
+  width: 100%; padding: 11px 14px; background: #000000; color: #ffffff; border: 1px solid #000000;
+  border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
 }
-.btn-generate:hover { background: #2dd4bf; }
-.btn-generate:disabled { background: #334047; color: #91a0a8; cursor: not-allowed; }
+.btn-generate:hover { background: #333333; border-color: #333333; }
+.btn-generate:disabled { background: #fafafa; border-color: var(--line); color: #999999; cursor: not-allowed; }
 .batch-grid {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end;
 }
@@ -135,30 +137,30 @@ h1 { margin-bottom: 4px; font-size: 22px; color: var(--text); font-weight: 750; 
 }
 .batch-actions { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 10px; }
 .btn-secondary, .btn-danger {
-  padding: 10px 12px; color: #fff; border: none; border-radius: 6px; font-size: 14px;
-  font-weight: 750; cursor: pointer; transition: background 0.2s;
+  padding: 10px 12px; border-radius: 6px; font-size: 14px;
+  font-weight: 500; cursor: pointer; transition: background 0.2s, border-color 0.2s;
 }
-.btn-secondary { background: var(--blue); }
-.btn-secondary:hover { background: #2563eb; }
-.btn-secondary:disabled, .btn-danger:disabled { background: #334047; color: #91a0a8; cursor: not-allowed; }
-.btn-danger { background: var(--red); min-width: 84px; }
-.btn-danger:hover { background: #dc2626; }
+.btn-secondary { background: #000000; color: #ffffff; border: 1px solid #000000; }
+.btn-secondary:hover { background: #333333; border-color: #333333; }
+.btn-secondary:disabled, .btn-danger:disabled { background: #fafafa; border-color: var(--line); color: #999999; cursor: not-allowed; }
+.btn-danger { background: #ffffff; color: var(--red); border: 1px solid #f5b5b5; min-width: 84px; }
+.btn-danger:hover { background: #fff5f5; border-color: var(--red); }
 .batch-summary {
   margin-top: 10px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
 }
 .batch-stat { background: var(--field); border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
-.batch-stat .label { color: var(--muted-2); font-size: 11px; margin-bottom: 4px; font-weight: 650; }
-.batch-stat .value { color: var(--text); font-size: 18px; font-weight: 800; }
-.batch-stat:first-child { border-color: rgba(45, 212, 191, 0.45); }
-.batch-stat:first-child .value { color: var(--accent); }
+.batch-stat .label { color: var(--muted); font-size: 12px; margin-bottom: 4px; font-weight: 400; }
+.batch-stat .value { color: var(--text); font-size: 20px; font-weight: 600; }
+.batch-stat:first-child { border-color: var(--line); }
+.batch-stat:first-child .value { color: var(--text); }
 .batch-stat.success .value { color: var(--green); }
 .batch-stat.fail .value { color: var(--red); }
 .batch-stat.warn .value { color: var(--amber); }
 
 .output-panel {
-  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px; margin-top: 16px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 20px; margin-top: 16px;
 }
-.output-panel h3 { font-size: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--text); }
+.output-panel h3 { font-size: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--text); font-weight: 500; }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .status-idle { background: var(--muted-2); }
 .status-running { background: var(--amber); animation: pulse 1s infinite; }
@@ -167,16 +169,16 @@ h1 { margin-bottom: 4px; font-size: 22px; color: var(--text); font-weight: 750; 
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 
 .output-log {
-  background: #090b0c; border: 1px solid var(--line-soft); border-radius: 6px; padding: 12px; font-size: 12px;
+  background: #fafafa; border: 1px solid var(--line); border-radius: 6px; padding: 12px; font-size: 12px;
   line-height: 1.55; max-height: 320px; overflow-y: auto; white-space: pre-wrap;
-  word-break: break-all; color: #b7c2c9; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-all; color: #333333; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 .output-result { margin-top: 12px; }
 .output-result img { max-width: 100%; border-radius: 6px; margin-top: 8px; border: 1px solid var(--line); }
 .output-result video { max-width: 100%; border-radius: 6px; margin-top: 8px; border: 1px solid var(--line); }
 
 .model-list::-webkit-scrollbar, .output-log::-webkit-scrollbar { width: 4px; }
-.model-list::-webkit-scrollbar-thumb, .output-log::-webkit-scrollbar-thumb { background: #3a464d; border-radius: 2px; }
+.model-list::-webkit-scrollbar-thumb, .output-log::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 2px; }
 
 @media (max-width: 768px) {
   .main-layout { flex-direction: column; }
@@ -235,8 +237,8 @@ h1 { margin-bottom: 4px; font-size: 22px; color: var(--text); font-weight: 750; 
               <input type="number" id="batchCount" min="1" max="100" value="10">
             </div>
             <div>
-              <label>间隔秒</label>
-              <input type="number" id="batchDelay" min="0" max="300" value="2">
+              <label>并发数</label>
+              <input type="number" id="batchConcurrency" min="1" max="50" value="3">
             </div>
             <div>
               <label>显示结果</label>
@@ -563,11 +565,11 @@ uploadArea.onclick = (e) => {
   fileInput.click();
 };
 
-uploadArea.ondragover = (e) => { e.preventDefault(); uploadArea.style.borderColor = "var(--accent)"; };
-uploadArea.ondragleave = () => { uploadArea.style.borderColor = "#3d4a51"; };
+uploadArea.ondragover = (e) => { e.preventDefault(); uploadArea.style.borderColor = "#000000"; };
+uploadArea.ondragleave = () => { uploadArea.style.borderColor = "#d4d4d4"; };
 uploadArea.ondrop = (e) => {
   e.preventDefault();
-  uploadArea.style.borderColor = "#3d4a51";
+  uploadArea.style.borderColor = "#d4d4d4";
   handleFiles(e.dataTransfer.files);
 };
 
@@ -641,19 +643,20 @@ function collectGenerationRequest() {
   return { url, headers, loggedHeaders, body, prompt, model: STATE.selectedModel };
 }
 
-async function runGenerationRequest(request, appendLog) {
+async function runGenerationRequest(request, appendLog, logPrefix = "") {
   const startTime = Date.now();
   let fullContent = "";
+  const logLine = (text) => appendLog(logPrefix ? `${logPrefix}${text}` : text);
 
-  appendLog(`[${new Date().toLocaleTimeString()}] 模型: ${request.model}\n`);
-  appendLog(`[${new Date().toLocaleTimeString()}] 提示词: ${request.prompt.substring(0, 100)}${request.prompt.length > 100 ? '...' : ''}\n`);
-  appendLog(`[${new Date().toLocaleTimeString()}] 开始请求...\n`);
-  appendLog(`\n--- 请求参数 ---\n`);
-  appendLog(`URL: ${request.url}\n`);
-  appendLog(`Method: POST\n`);
-  appendLog(`Headers:\n${formatJson(request.loggedHeaders)}\n`);
-  appendLog(`Body:\n${formatJson(redactDataUrls(request.body))}\n`);
-  appendLog(`--- 响应 ---\n`);
+  logLine(`[${new Date().toLocaleTimeString()}] 模型: ${request.model}\n`);
+  logLine(`[${new Date().toLocaleTimeString()}] 提示词: ${request.prompt.substring(0, 100)}${request.prompt.length > 100 ? '...' : ''}\n`);
+  logLine(`[${new Date().toLocaleTimeString()}] 开始请求...\n`);
+  logLine(`\n--- 请求参数 ---\n`);
+  logLine(`URL: ${request.url}\n`);
+  logLine(`Method: POST\n`);
+  logLine(`Headers:\n${formatJson(request.loggedHeaders)}\n`);
+  logLine(`Body:\n${formatJson(redactDataUrls(request.body))}\n`);
+  logLine(`--- 响应 ---\n`);
 
   const resp = await fetch(request.url, {
     method: "POST",
@@ -665,9 +668,9 @@ async function runGenerationRequest(request, appendLog) {
     const errText = await resp.text();
     const responseHeaders = {};
     resp.headers.forEach((value, key) => { responseHeaders[key] = value; });
-    appendLog(`Status: HTTP ${resp.status} ${resp.statusText}\n`);
-    appendLog(`Response Headers:\n${formatJson(responseHeaders)}\n`);
-    appendLog(`Response Body:\n${errText}\n`);
+    logLine(`Status: HTTP ${resp.status} ${resp.statusText}\n`);
+    logLine(`Response Headers:\n${formatJson(responseHeaders)}\n`);
+    logLine(`Response Body:\n${errText}\n`);
     throw new Error(`HTTP ${resp.status}: ${errText}`);
   }
 
@@ -691,7 +694,7 @@ async function runGenerationRequest(request, appendLog) {
       try {
         const parsed = JSON.parse(data);
         if (parsed.error) {
-          appendLog(`\n❌ 错误: ${JSON.stringify(parsed.error)}\n`);
+          logLine(`\n❌ 错误: ${JSON.stringify(parsed.error)}\n`);
           throw new Error(JSON.stringify(parsed.error));
         }
         const choices = parsed.choices || [];
@@ -713,7 +716,7 @@ async function runGenerationRequest(request, appendLog) {
   if (!fullContent.trim()) {
     throw new Error("响应为空，未收到生成内容");
   }
-  appendLog(`\n\n[${new Date().toLocaleTimeString()}] 完成，耗时 ${elapsed.toFixed(1)}s\n`);
+  logLine(`\n\n[${new Date().toLocaleTimeString()}] 完成，耗时 ${elapsed.toFixed(1)}s\n`);
   return { content: fullContent, elapsed };
 }
 
@@ -785,10 +788,6 @@ function updateBatchSummary(success, fail, totalElapsed) {
   document.getElementById("batchAvg").textContent = avg;
 }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 async function runBatchTest() {
   if (!STATE.selectedModel || STATE.generating) return;
 
@@ -801,11 +800,14 @@ async function runBatchTest() {
   }
 
   const count = Math.max(1, Math.min(100, parseInt(document.getElementById("batchCount").value, 10) || 1));
-  const delaySeconds = Math.max(0, Math.min(300, parseInt(document.getElementById("batchDelay").value, 10) || 0));
+  const concurrency = Math.max(1, Math.min(50, parseInt(document.getElementById("batchConcurrency").value, 10) || 1));
   const renderEvery = Math.max(0, parseInt(document.getElementById("batchRenderEvery").value, 10) || 0);
   let success = 0;
   let fail = 0;
   let totalElapsed = 0;
+  let started = 0;
+  let completed = 0;
+  let nextIndex = 1;
 
   STATE.generating = true;
   STATE.batchStop = false;
@@ -821,43 +823,51 @@ async function runBatchTest() {
   dot.className = "status-dot status-running";
 
   try {
-    appendLog(`[${new Date().toLocaleTimeString()}] 批量测试开始: ${count} 次，间隔 ${delaySeconds}s\n`);
-    for (let i = 1; i <= count; i++) {
-      if (STATE.batchStop) {
-        appendLog(`\n[${new Date().toLocaleTimeString()}] 已手动停止，完成 ${i - 1}/${count} 次\n`);
-        break;
-      }
+    appendLog(`[${new Date().toLocaleTimeString()}] 并发批量测试开始: ${count} 次，并发 ${concurrency}\n`);
 
-      document.getElementById("statusText").textContent = `批量测试 ${i}/${count}`;
-      appendLog(`\n========== 第 ${i}/${count} 次 ==========\n`);
+    async function worker(workerId) {
+      while (!STATE.batchStop) {
+        const current = nextIndex;
+        if (current > count) break;
+        nextIndex += 1;
+        started += 1;
 
-      const attemptStart = Date.now();
-      try {
-        const result = await runGenerationRequest(request, appendLog);
-        success += 1;
-        totalElapsed += result.elapsed;
-        appendLog(`✅ 第 ${i} 次成功，耗时 ${result.elapsed.toFixed(1)}s\n`);
-        if (renderEvery > 0 && (i % renderEvery === 0 || i === count)) {
-          renderResult(result.content);
+        document.getElementById("statusText").textContent = `并发测试 ${completed}/${count}，运行中 ${started - completed}`;
+        appendLog(`\n========== Worker ${workerId} / 第 ${current}/${count} 次 ==========\n`);
+
+        const attemptStart = Date.now();
+        try {
+          const result = await runGenerationRequest(request, appendLog, `[${current}] `);
+          success += 1;
+          totalElapsed += result.elapsed;
+          appendLog(`✅ 第 ${current} 次成功，耗时 ${result.elapsed.toFixed(1)}s\n`);
+          if (renderEvery > 0 && (current % renderEvery === 0 || current === count)) {
+            renderResult(result.content);
+          }
+        } catch (e) {
+          const failElapsed = (Date.now() - attemptStart) / 1000;
+          fail += 1;
+          totalElapsed += failElapsed;
+          appendLog(`❌ 第 ${current} 次失败，耗时 ${failElapsed.toFixed(1)}s: ${e.message}\n`);
+        } finally {
+          completed += 1;
+          updateBatchSummary(success, fail, totalElapsed);
+          document.getElementById("statusText").textContent = `并发测试 ${completed}/${count}，运行中 ${started - completed}`;
         }
-      } catch (e) {
-        const failElapsed = (Date.now() - attemptStart) / 1000;
-        fail += 1;
-        totalElapsed += failElapsed;
-        appendLog(`❌ 第 ${i} 次失败，耗时 ${failElapsed.toFixed(1)}s: ${e.message}\n`);
       }
+    }
 
-      updateBatchSummary(success, fail, totalElapsed);
-      if (i < count && !STATE.batchStop && delaySeconds > 0) {
-        appendLog(`[${new Date().toLocaleTimeString()}] 等待 ${delaySeconds}s 后继续...\n`);
-        await sleep(delaySeconds * 1000);
-      }
+    const workerCount = Math.min(concurrency, count);
+    await Promise.all(Array.from({ length: workerCount }, (_, idx) => worker(idx + 1)));
+
+    if (STATE.batchStop) {
+      appendLog(`\n[${new Date().toLocaleTimeString()}] 已手动停止派发，完成 ${completed}/${count} 次，已启动 ${started} 次\n`);
     }
 
     const done = success + fail;
     const rate = done ? ((success / done) * 100).toFixed(1) : "0.0";
     appendLog(`\n========== 批量测试完成 ==========\n`);
-    appendLog(`总次数: ${done}/${count}\n成功: ${success}\n失败: ${fail}\n成功率: ${rate}%\n平均耗时: ${done ? (totalElapsed / done).toFixed(1) : "-"}s\n`);
+    appendLog(`目标次数: ${count}\n启动次数: ${started}\n完成次数: ${done}\n并发数: ${concurrency}\n成功: ${success}\n失败: ${fail}\n成功率: ${rate}%\n平均耗时: ${done ? (totalElapsed / done).toFixed(1) : "-"}s\n`);
     dot.className = fail === 0 && success > 0 ? "status-dot status-done" : "status-dot status-error";
     document.getElementById("statusText").textContent = `批量完成，成功率 ${rate}%`;
   } finally {
