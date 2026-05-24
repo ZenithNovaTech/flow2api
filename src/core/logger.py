@@ -83,6 +83,25 @@ class DebugLogger:
             return f"{data[:100]}... (truncated, total {len(data)} chars)"
         return data
 
+    def _format_metadata_value(self, value: Any) -> str:
+        """Format metadata values without dumping huge payloads."""
+        if isinstance(value, (dict, list)):
+            try:
+                return json.dumps(self._truncate_large_fields(value), ensure_ascii=False)
+            except Exception:
+                return str(value)
+        return str(value)
+
+    def _write_metadata(self, metadata: Optional[Dict[str, Any]]):
+        """Write a compact metadata block for request correlation."""
+        if not metadata:
+            return
+        self.logger.info("\n🧭 Metadata:")
+        for key, value in metadata.items():
+            if value is None:
+                continue
+            self.logger.info(f"  {key}: {self._format_metadata_value(value)}")
+
     def log_request(
         self,
         method: str,
@@ -90,7 +109,8 @@ class DebugLogger:
         headers: Dict[str, str],
         body: Optional[Any] = None,
         files: Optional[Dict] = None,
-        proxy: Optional[str] = None
+        proxy: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None
     ):
         """Log API request details to log.txt"""
 
@@ -105,6 +125,7 @@ class DebugLogger:
             # Basic info
             self.logger.info(f"Method: {method}")
             self.logger.info(f"URL: {url}")
+            self._write_metadata(metadata)
 
             # Headers
             self.logger.info("\n📋 Headers:")
@@ -164,7 +185,8 @@ class DebugLogger:
         status_code: int,
         headers: Dict[str, str],
         body: Any,
-        duration_ms: Optional[float] = None
+        duration_ms: Optional[float] = None,
+        metadata: Optional[Dict[str, Any]] = None
     ):
         """Log API response details to log.txt"""
 
@@ -183,6 +205,7 @@ class DebugLogger:
             # Duration
             if duration_ms is not None:
                 self.logger.info(f"Duration: {duration_ms:.2f}ms")
+            self._write_metadata(metadata)
 
             # Headers
             self.logger.info("\n📋 Response Headers:")
@@ -223,7 +246,8 @@ class DebugLogger:
         self,
         error_message: str,
         status_code: Optional[int] = None,
-        response_text: Optional[str] = None
+        response_text: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None
     ):
         """Log API error details to log.txt"""
 
@@ -239,6 +263,7 @@ class DebugLogger:
                 self.logger.info(f"Status Code: {status_code}")
 
             self.logger.info(f"Error Message: {error_message}")
+            self._write_metadata(metadata)
 
             if response_text:
                 self.logger.info("\n📦 Error Response:")

@@ -118,7 +118,8 @@ class FlowClient:
         use_media_proxy: bool = False,
         respect_fingerprint_proxy: bool = True,
         force_no_proxy: bool = False,
-        allow_urllib_fallback: bool = True
+        allow_urllib_fallback: bool = True,
+        log_context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """统一HTTP请求处理
 
@@ -153,6 +154,7 @@ class FlowClient:
                 if proxy_url == "":
                     proxy_url = None
         request_timeout = timeout or self.timeout
+        request_id = uuid.uuid4().hex[:10]
 
         if headers is None:
             headers = {}
@@ -215,19 +217,39 @@ class FlowClient:
                 headers["sec-ch-ua-platform"] = "\"Windows\""
                 headers["sec-ch-ua-mobile"] = "?0"
 
+        log_metadata = self._build_request_log_metadata(
+            request_id=request_id,
+            timeout=request_timeout,
+            proxy_url=proxy_url,
+            proxy_source=self._resolve_proxy_source(
+                fingerprint=fingerprint,
+                use_media_proxy=use_media_proxy,
+                force_no_proxy=force_no_proxy,
+                respect_fingerprint_proxy=respect_fingerprint_proxy,
+            ),
+            use_st=use_st,
+            use_at=use_at,
+            fingerprint=fingerprint,
+            json_data=json_data,
+            context=log_context,
+            allow_urllib_fallback=allow_urllib_fallback,
+        )
+
         # Log request
         if config.debug_enabled:
             if isinstance(fingerprint, dict):
                 proxy_for_log = proxy_url if proxy_url else "direct"
                 debug_logger.log_info(
-                    f"[FINGERPRINT] 使用打码浏览器指纹提交请求: UA={headers.get('User-Agent', '')[:120]}, proxy={proxy_for_log}"
+                    f"[FINGERPRINT] request_id={request_id} 使用打码浏览器指纹提交请求: "
+                    f"UA={headers.get('User-Agent', '')[:120]}, proxy={proxy_for_log}"
                 )
             debug_logger.log_request(
                 method=method,
                 url=url,
                 headers=headers,
                 body=json_data,
-                proxy=proxy_url
+                proxy=proxy_url,
+                metadata=log_metadata,
             )
 
         start_time = time.time()
@@ -260,7 +282,12 @@ class FlowClient:
                         status_code=response.status_code,
                         headers=dict(response.headers),
                         body=response.text,
-                        duration_ms=duration_ms
+                        duration_ms=duration_ms,
+                        metadata={
+                            **log_metadata,
+                            "duration_ms": int(duration_ms),
+                            "response_bytes": len(response.content or b""),
+                        },
                     )
 
                 # 检查HTTP错误
@@ -285,9 +312,18 @@ class FlowClient:
                         error_reason = f"HTTP Error {response.status_code}: {response.text[:200]}"
                     
                     # 失败时输出请求体和错误内容到控制台
-                    debug_logger.log_error(f"[API FAILED] URL: {url}")
-                    debug_logger.log_error(f"[API FAILED] Request Body: {json_data}")
-                    debug_logger.log_error(f"[API FAILED] Response: {response.text}")
+                    debug_logger.log_error(
+                        f"[API FAILED] URL: {url}",
+                        metadata={**log_metadata, "status_code": response.status_code},
+                    )
+                    debug_logger.log_error(
+                        f"[API FAILED] Request Body: {self._summarize_payload(json_data)}",
+                        metadata={"request_id": request_id},
+                    )
+                    debug_logger.log_error(
+                        f"[API FAILED] Response: {response.text}",
+                        metadata={"request_id": request_id},
+                    )
                     
                     raise Exception(error_reason)
 
@@ -301,17 +337,27 @@ class FlowClient:
 
             # 如果不是我们自己抛出的异常，记录日志
             if "HTTP Error" not in error_msg and not any(x in error_msg for x in ["PUBLIC_ERROR", "INVALID_ARGUMENT"]):
-                debug_logger.log_error(f"[API FAILED] URL: {url}")
-                debug_logger.log_error(f"[API FAILED] Request Body: {json_data}")
+                debug_logger.log_error(
+                    f"[API FAILED] URL: {url}",
+                    metadata={**log_metadata, "duration_ms": int(duration_ms)},
+                )
+                debug_logger.log_error(
+                    f"[API FAILED] Request Body: {self._summarize_payload(json_data)}",
+                    metadata={"request_id": request_id},
+                )
                 debug_logger.log_error(
                     f"[API FAILED] Exception: type={type(e).__name__} repr={repr(e)} "
-                    f"duration_ms={duration_ms:.0f} cause={repr(cause)} context={repr(context)}"
+                    f"duration_ms={duration_ms:.0f} cause={repr(cause)} context={repr(context)}",
+                    metadata={"request_id": request_id},
                 )
-                debug_logger.log_error(f"[API FAILED] Traceback: {traceback.format_exc()}")
+                debug_logger.log_error(
+                    f"[API FAILED] Traceback: {traceback.format_exc()}",
+                    metadata={"request_id": request_id},
+                )
 
             if allow_urllib_fallback and self._should_fallback_to_urllib(error_msg):
                 debug_logger.log_warning(
-                    f"[HTTP FALLBACK] curl_cffi 请求失败，回退 urllib: {method.upper()} {url}"
+                    f"[HTTP FALLBACK] request_id={request_id} curl_cffi 请求失败，回退 urllib: {method.upper()} {url}"
                 )
                 try:
                     return await asyncio.to_thread(
@@ -326,7 +372,8 @@ class FlowClient:
                 except Exception as fallback_error:
                     debug_logger.log_error(
                         f"[HTTP FALLBACK] urllib 回退也失败: "
-                        f"type={type(fallback_error).__name__} repr={repr(fallback_error)}"
+                        f"type={type(fallback_error).__name__} repr={repr(fallback_error)}",
+                        metadata={"request_id": request_id},
                     )
                     raise Exception(
                         f"Flow API request failed: curl={type(e).__name__}: {error_msg}; "
@@ -355,6 +402,118 @@ class FlowClient:
                 "network is unreachable",
             ]
         )
+
+    def _summarize_payload(self, payload: Any) -> Any:
+        """Create a small, safe payload summary for diagnostic metadata."""
+        if payload is None:
+            return None
+        if isinstance(payload, dict):
+            summary: Dict[str, Any] = {
+                "type": "dict",
+                "keys": list(payload.keys()),
+            }
+            client_context = payload.get("clientContext")
+            if isinstance(client_context, dict):
+                summary["client_context"] = {
+                    "projectId": client_context.get("projectId"),
+                    "sessionId": client_context.get("sessionId"),
+                    "tool": client_context.get("tool"),
+                    "userPaygateTier": client_context.get("userPaygateTier"),
+                    "hasRecaptchaToken": bool(
+                        (client_context.get("recaptchaContext") or {}).get("token")
+                    ),
+                }
+            requests = payload.get("requests")
+            if isinstance(requests, list):
+                summary["request_count"] = len(requests)
+                if requests and isinstance(requests[0], dict):
+                    first = requests[0]
+                    summary["first_request"] = {
+                        "keys": list(first.keys()),
+                        "model": first.get("imageModelName") or first.get("videoModelKey"),
+                        "aspectRatio": first.get("imageAspectRatio") or first.get("aspectRatio"),
+                        "seed": first.get("seed"),
+                        "imageInputs": len(first.get("imageInputs") or []),
+                        "referenceImages": len(first.get("referenceImages") or []),
+                    }
+            media = payload.get("media")
+            if isinstance(media, list):
+                summary["media_count"] = len(media)
+            operations = payload.get("operations")
+            if isinstance(operations, list):
+                summary["operation_count"] = len(operations)
+            return summary
+        if isinstance(payload, list):
+            return {"type": "list", "count": len(payload)}
+        if isinstance(payload, str):
+            return {"type": "str", "length": len(payload), "preview": payload[:160]}
+        return {"type": type(payload).__name__, "value": str(payload)[:160]}
+
+    def _summarize_fingerprint(self, fingerprint: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """Summarize browser fingerprint fields useful for diagnosing captcha coupling."""
+        if not isinstance(fingerprint, dict) or not fingerprint:
+            return None
+        proxy_url = fingerprint.get("proxy_url")
+        return {
+            "has_user_agent": bool(fingerprint.get("user_agent")),
+            "user_agent": (fingerprint.get("user_agent") or "")[:120] or None,
+            "accept_language": fingerprint.get("accept_language"),
+            "sec_ch_ua_platform": fingerprint.get("sec_ch_ua_platform"),
+            "sec_ch_ua_mobile": fingerprint.get("sec_ch_ua_mobile"),
+            "has_sec_ch_ua": bool(fingerprint.get("sec_ch_ua")),
+            "proxy": "direct" if proxy_url == "" else ("configured" if proxy_url else None),
+        }
+
+    def _resolve_proxy_source(
+        self,
+        fingerprint: Optional[Dict[str, Any]],
+        use_media_proxy: bool,
+        force_no_proxy: bool,
+        respect_fingerprint_proxy: bool,
+    ) -> str:
+        """Describe why a proxy route was chosen."""
+        if force_no_proxy:
+            return "forced_direct"
+        if (
+            respect_fingerprint_proxy
+            and isinstance(fingerprint, dict)
+            and "proxy_url" in fingerprint
+        ):
+            return "fingerprint"
+        if use_media_proxy:
+            return "media_proxy"
+        if self.proxy_manager:
+            return "request_proxy"
+        return "direct"
+
+    def _build_request_log_metadata(
+        self,
+        request_id: str,
+        timeout: int,
+        proxy_url: Optional[str],
+        proxy_source: str,
+        use_st: bool,
+        use_at: bool,
+        fingerprint: Optional[Dict[str, Any]],
+        json_data: Optional[Dict[str, Any]],
+        context: Optional[Dict[str, Any]],
+        allow_urllib_fallback: bool,
+    ) -> Dict[str, Any]:
+        metadata: Dict[str, Any] = {
+            "request_id": request_id,
+            "timeout_seconds": timeout,
+            "proxy": proxy_url or "direct",
+            "proxy_source": proxy_source,
+            "auth": "ST" if use_st else ("AT" if use_at else "none"),
+            "allow_urllib_fallback": allow_urllib_fallback,
+            "payload_summary": self._summarize_payload(json_data),
+        }
+        fingerprint_summary = self._summarize_fingerprint(fingerprint)
+        if fingerprint_summary:
+            metadata["fingerprint"] = fingerprint_summary
+        if context:
+            metadata.update({f"context_{key}": value for key, value in context.items()})
+        return metadata
 
     def _sync_json_request_via_urllib(
         self,
@@ -493,7 +652,11 @@ class FlowClient:
                     use_at=True,
                     at_token=at,
                     timeout=timeout,
-                    allow_urllib_fallback=False
+                    allow_urllib_fallback=False,
+                    log_context={
+                        "operation": "video_api",
+                        "timeout_kind": "submit_or_poll",
+                    },
                 ),
                 timeout=timeout + 5
             )
@@ -589,6 +752,12 @@ class FlowClient:
                     timeout=request_timeout,
                     use_media_proxy=prefer_media_proxy,
                     respect_fingerprint_proxy=not prefer_media_proxy,
+                    log_context={
+                        "operation": "image_generation",
+                        "http_attempt": attempt_index + 1,
+                        "http_total_attempts": total_attempts,
+                        "route": route_label,
+                    },
                 )
                 if http_attempt_info is not None:
                     http_attempt_info["duration_ms"] = int((time.time() - http_attempt_started_at) * 1000)
